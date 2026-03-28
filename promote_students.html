@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Promote Students — SVPP AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px 20px 140px;
+            /* Padding for bottom bar */
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            padding-top: 20px;
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            color: var(--tp);
+            text-decoration: none;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header-sub {
+            font-size: 14px;
+            color: var(--ts);
+            font-weight: 600;
+        }
+
+        /* Setup Card */
+        .setup-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            margin-bottom: 24px;
+        }
+
+        .row-inputs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            background: #f8faff;
+            border: 2px solid #edf2f7;
+            border-radius: 14px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tp);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .setup-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Buttons */
+        .btn-main {
+            padding: 12px 24px;
+            border-radius: 14px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.2);
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .btn-main:active {
+            transform: scale(0.96);
+        }
+
+        .btn-promote {
+            background: #7c3aed;
+            /* Purple */
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
+        }
+
+        .btn-promote-all-container {
+            display: none;
+            justify-content: flex-end;
+            margin-bottom: 16px;
+        }
+
+        /* List Items */
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .list-item {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            /* Switch to flex */
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            transition: transform 0.2s;
+        }
+
+        .list-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.05);
+        }
+
+        .item-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-width: 0;
+            /* Let flex children truncate */
+        }
+
+        .item-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+            /* Prevent shrinking */
+        }
+
+        .item-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .item-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--tp);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item-roll {
+            font-size: 13px;
+            color: var(--ts);
+            font-weight: 600;
+        }
+
+        .item-meta {
+            display: inline-flex;
+            width: fit-content;
+            padding: 4px 10px;
+            background: #f3f4f6;
+            color: #4b5563;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(26, 79, 219, 0.1);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .ghost {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ts);
+            display: none;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .list-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+
+            .list-item button {
+                /* Full width button on mobile */
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <!-- Header -->
+        <div class="header">
+            <a href="javascript:void(0)" onclick="history.back()" class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <div>
+                <div class="header-title">Promote Students</div>
+                <div class="header-sub">Upgrade students to next semester</div>
+            </div>
+        </div>
+
+        <!-- Setup Card -->
+        <div class="setup-card">
+            <div class="row-inputs">
+                <div class="input-group">
+                    <label>Year</label>
+                    <select id="selYear">
+                        <option value="1">Year 1</option>
+                        <option value="2">Year 2</option>
+                        <option value="3">Year 3</option>
+                        <option value="4">Year 4</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Semester</label>
+                    <select id="selSem">
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                    </select>
+                </div>
+            </div>
+            <div class="setup-actions">
+                <button onclick="fetchStudents()" id="btnFetch" class="btn-main">Fetch Students</button>
+            </div>
+        </div>
+
+        <!-- Promote All Container -->
+        <div class="btn-promote-all-container" id="promoteAllContainer">
+            <button onclick="promoteAll()" class="btn-main btn-promote" id="btnPromoteAll">Promote All Students</button>
+        </div>
+
+        <!-- Loader -->
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="ghost" class="ghost">
+            <p>No students found for this year and semester.</p>
+        </div>
+
+        <!-- List -->
+        <div class="item-list" id="studentList">
+            <!-- Student cards rendered here -->
+        </div>
+
+    </div>
+
+    <script>
+        let currentStudents = [];
+
+        window.onload = async () => {
+            await protectRoute(['admin']);
+            document.getElementById('selYear').onchange = () => { clearList(); };
+            document.getElementById('selSem').onchange = () => { clearList(); };
+        };
+
+        function clearList() {
+            document.getElementById('studentList').innerHTML = '';
+            document.getElementById('promoteAllContainer').style.display = 'none';
+            document.getElementById('ghost').style.display = 'none';
+            currentStudents = [];
+        }
+
+        async function fetchStudents() {
+            const y = parseInt(document.getElementById('selYear').value);
+            const s = parseInt(document.getElementById('selSem').value);
+
+            const btn = document.getElementById('btnFetch');
+            const loader = document.getElementById('loader');
+            const ghost = document.getElementById('ghost');
+            const list = document.getElementById('studentList');
+            const promoteAllBtn = document.getElementById('promoteAllContainer');
+
+            btn.disabled = true; btn.textContent = 'Fetching...';
+            list.innerHTML = '';
+            promoteAllBtn.style.display = 'none';
+            ghost.style.display = 'none';
+            loader.style.display = 'flex';
+
+            currentStudents = [];
+
+            try {
+                // Fetch approved students in specific year/sem
+                const { data, error } = await sb.from('students')
+                    .select('id, name, roll_number, face_image_url, year, semester')
+                    .eq('year', y)
+                    .eq('semester', s)
+                    .order('roll_number', { ascending: true });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    ghost.style.display = 'block';
+                } else {
+                    currentStudents = data;
+                    renderStudents(currentStudents);
+                    promoteAllBtn.style.display = 'flex';
+                }
+
+            } catch (err) {
+                console.error("Fetch Error: ", err);
+                showError('Could not fetch students: ' + err.message);
+            } finally {
+                loader.style.display = 'none';
+                btn.disabled = false; btn.textContent = 'Fetch Students';
+            }
+        }
+
+        function renderStudents(studentsArray) {
+            const list = document.getElementById('studentList');
+            let html = '';
+
+            const nextLevel = calculateNextLevel(
+                parseInt(document.getElementById('selYear').value),
+                parseInt(document.getElementById('selSem').value)
+            );
+
+            studentsArray.forEach(st => {
+                const photoSrc = st.face_image_url || 'https://ui-avatars.com/api/?background=random&color=fff&name=' + encodeURIComponent(st.name);
+
+                let btnHtml = '';
+                if (nextLevel.error) {
+                    btnHtml = `<button class="btn-main" style="background:#ef4444;" onclick="showError('Cannot promote: 4th Year completed.')">Max Reached</button>`;
+                } else {
+                    btnHtml = `<button class="btn-main btn-promote" id="btn-ind-${st.id}" onclick="promoteIndividual('${st.id}')">Promote ›</button>`;
+                }
+
+                html += `
+                <div class="list-item" id="row-${st.id}">
+                    <div class="item-info">
+                        <img src="${photoSrc}" class="item-photo" alt="Photo" onerror="this.src='https://ui-avatars.com/api/?name=St'">
+                        <div class="item-text">
+                            <span class="item-name">${escapeHTML(st.name)}</span>
+                            <span class="item-roll">${escapeHTML(st.roll_number)}</span>
+                            <span class="item-meta">Year ${escapeHTML(String(st.year))} • Sem ${escapeHTML(String(st.semester))}</span>
+                        </div>
+                    </div>
+                    ${btnHtml}
+                </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        // Logic Engine for Promotions
+        function calculateNextLevel(currentYear, currentSem) {
+            if (currentYear === 1 && currentSem === 1) return { y: 1, s: 2 };
+            if (currentYear === 1 && currentSem === 2) return { y: 2, s: 1 };
+            if (currentYear === 2 && currentSem === 1) return { y: 2, s: 2 };
+            if (currentYear === 2 && currentSem === 2) return { y: 3, s: 1 };
+            if (currentYear === 3 && currentSem === 1) return { y: 3, s: 2 };
+            if (currentYear === 3 && currentSem === 2) return { y: 4, s: 1 };
+            if (currentYear === 4 && currentSem === 1) return { y: 4, s: 2 };
+            if (currentYear === 4 && currentSem === 2) return { error: true }; // Final limits
+            return { error: true }; // Fallback
+        }
+
+        async function executePromotion(idsToProcess, buttonEl, originalText) {
+            const currentYear = parseInt(document.getElementById('selYear').value);
+            const currentSem = parseInt(document.getElementById('selSem').value);
+
+            const next = calculateNextLevel(currentYear, currentSem);
+            if (next.error) {
+                showError('Promotion failed: Students are in 4th Year Sem 2 (Final Year Completed). No further promotion possible.');
+                return;
+            }
+
+            const confirmed = await showConfirm(`Promote students to Year ${next.y}, Sem ${next.s}?`, { title: 'Confirm Promotion', confirmText: 'Promote', danger: false });
+            if (!confirmed) {
+                return;
+            }
+
+            if (buttonEl) {
+                buttonEl.disabled = true;
+                buttonEl.textContent = "Promoting...";
+            }
+
+            try {
+                // Update students table
+                const { error } = await sb.from('students')
+                    .update({ year: next.y, semester: next.s })
+                    .in('id', idsToProcess);
+
+                if (error) throw error;
+
+                // Log to promotion_history for audit trail
+                const historyPayload = idsToProcess.map(id => {
+                    const st = currentStudents.find(s => s.id === id);
+                    return {
+                        student_id: id,
+                        student_name: st ? st.name : null,
+                        roll_number: st ? st.roll_number : null,
+                        from_year: currentYear,
+                        from_semester: currentSem,
+                        to_year: next.y,
+                        to_semester: next.s
+                    };
+                });
+                await sb.from('promotion_history').insert(historyPayload).then(({ error: hErr }) => {
+                    if (hErr) console.warn('History log failed:', hErr.message);
+                });
+
+                showSuccess(`Promoted ${idsToProcess.length} student(s) to Year ${next.y} Sem ${next.s}!`);
+
+                // Remove promoted rows from UI
+                idsToProcess.forEach(id => {
+                    const row = document.getElementById(`row-${id}`);
+                    if (row) row.remove();
+                    currentStudents = currentStudents.filter(s => s.id !== id);
+                });
+
+                // Show empty state if all promoted
+                if (currentStudents.length === 0) {
+                    document.getElementById('promoteAllContainer').style.display = 'none';
+                    document.getElementById('ghost').style.display = 'block';
+                }
+
+            } catch (err) {
+                console.error("Promotion Error:", err);
+                showError('Failed to promote: ' + err.message);
+                if (buttonEl) {
+                    buttonEl.disabled = false;
+                    buttonEl.textContent = originalText;
+                }
+            }
+        }
+
+        async function promoteIndividual(studentId) {
+            const btn = document.getElementById(`btn-ind-${studentId}`);
+            await executePromotion([studentId], btn, "Promote ›");
+        }
+
+        async function promoteAll() {
+            if (currentStudents.length === 0) return;
+            const ids = currentStudents.map(s => s.id);
+            const btn = document.getElementById('btnPromoteAll');
+            await executePromotion(ids, btn, "Promote All Students");
+        }
+    </script>
+</body>
+
+</html>

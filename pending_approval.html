@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Pending Approval — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(165deg, #f3f8ff 0%, #ddeeff 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(255, 255, 255, 0.9);
+            border-radius: 28px;
+            padding: 40px 30px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(26, 79, 219, 0.1);
+        }
+
+        .icon-wrap {
+            width: 80px;
+            height: 80px;
+            background: rgba(26, 79, 219, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .icon-wrap svg {
+            width: 40px;
+            height: 40px;
+            stroke: #1a4fdb;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0d1b3e;
+            margin-bottom: 12px;
+        }
+
+        p {
+            font-size: 14px;
+            color: #4a6080;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #fff;
+            border: 1.5px solid rgba(26, 79, 219, 0.2);
+            color: #1a4fdb;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #1a4fdb;
+            border-color: #1a4fdb;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+        <div class="icon-wrap">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </div>
+        <h1>Waiting for Approval</h1>
+        <p>Your profile and face image have been submitted successfully. Please wait while a staff member verifies and
+            approves your request.</p>
+        <button class="btn" onclick="checkStatus()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                <path d="M21 3v6h-6" />
+                <path d="M21 3l-7 7" />
+            </svg>
+            Check Status
+        </button>
+        <div style="margin-top:20px;">
+            <a href="#" onclick="logout()"
+                style="color:#e53e5a; font-size:13px; font-weight:600; text-decoration:none;">Logout</a>
+        </div>
+    </div>
+    <script>
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['student', 'admin']);
+            if (!session) return;
+
+            // Check if already an approved student
+            const { data: student } = await sb.from('students').select('id').eq('uid', session.user.id).maybeSingle();
+            if (student) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Check if request is actually pending
+            const { data: req } = await sb.from('student_requests').select('status').eq('uid', session.user.id).maybeSingle();
+            if (!req) {
+                window.location.href = 'profile_setup.html';
+            } else if (req.status === 'rejected') {
+                window.location.href = 'rejected_approval.html';
+            } else if (req.status === 'incomplete') {
+                window.location.href = 'face_capture.html';
+            }
+        });
+
+        async function checkStatus() {
+            const btn = document.querySelector('.btn');
+            btn.innerHTML = 'Checking...';
+            btn.disabled = true;
+
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return;
+
+            const { data: student } = await sb.from('students').select('id').eq('uid', session.user.id).maybeSingle();
+            if (student) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            const { data: req } = await sb.from('student_requests').select('status').eq('uid', session.user.id).maybeSingle();
+            if (req && req.status === 'rejected') {
+                window.location.href = 'rejected_approval.html';
+            } else {
+                setTimeout(() => {
+                    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                        <path d="M21 3v6h-6" />
+                        <path d="M21 3l-7 7" />
+                    </svg> Check Status`;
+                    btn.disabled = false;
+                }, 800);
+            }
+        }
+
+        async function logout() {
+            sessionStorage.removeItem("profileCheckComplete");
+            await sb.auth.signOut();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+
+</html>

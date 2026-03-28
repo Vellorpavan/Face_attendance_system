@@ -1,0 +1,4 @@
+--- Testing user_id/read_status ---
+user_id/read_status FAILED: Could not find the 'read_status' column of 'notifications' in the schema cache
+--- Testing target_user_id/is_read ---
+target_user_id/is_read FAILED: new row violates row-level security policy for table "notifications"

@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Mark Attendance — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="notification_service.js"></script>
+    <!-- face-api.js -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-light: #4d7dff;
+            --green: #12b76a;
+            --red: #e53e5a;
+            --glass: rgba(10, 16, 38, 0.55);
+            --glass-border: rgba(255, 255, 255, 0.13);
+        }
+
+        html,
+        body {
+            height: 100%;
+            width: 100%;
+            font-family: 'Inter', sans-serif;
+            background: #080f24;
+            overflow: hidden;
+        }
+
+        .cam-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            background: #0d1427;
+        }
+
+        #videoEl {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .vignette {
+            position: fixed;
+            inset: 0;
+            z-index: 1;
+            pointer-events: none;
+            background: radial-gradient(ellipse 62% 58% at 50% 46%, transparent 52%, rgba(8, 15, 36, 0.85) 100%);
+        }
+
+        .screen {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Header */
+        .header {
+            width: 100%;
+            max-width: 420px;
+            padding: 52px 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: fadeDown 0.45s ease both;
+        }
+
+        @keyframes fadeDown {
+            from {
+                opacity: 0;
+                transform: translateY(-14px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            flex-shrink: 0;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(14px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        .header-text {
+            flex: 1;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.3px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .header-sub {
+            font-size: 12.5px;
+            color: rgba(255, 255, 255, 0.62);
+            margin-top: 2px;
+        }
+
+        /* AI scan badge */
+        .scan-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(26, 79, 219, 0.25);
+            border: 1px solid rgba(77, 125, 255, 0.35);
+            border-radius: 999px;
+            padding: 5px 12px;
+            backdrop-filter: blur(8px);
+            font-size: 11px;
+            font-weight: 600;
+            color: #99bbff;
+        }
+
+        .badge-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4d7dff;
+            animation: pulse 1.5s ease infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(77, 125, 255, 0.7)
+            }
+
+            50% {
+                box-shadow: 0 0 0 7px rgba(77, 125, 255, 0)
+            }
+        }
+
+        /* Student card */
+        .stu-card {
+            margin-top: 16px;
+            width: 100%;
+            max-width: 380px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 13px 16px;
+            backdrop-filter: blur(18px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: fadeDown 0.4s 0.1s ease both;
+        }
+
+        .stu-avatar-sm {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            flex-shrink: 0;
+            background: rgba(26, 79, 219, 0.3);
+            border: 1px solid rgba(77, 125, 255, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #99bbff;
+        }
+
+        .stu-card-info {
+            flex: 1;
+        }
+
+        .stu-card-name {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .stu-card-roll {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.55);
+            margin-top: 1px;
+        }
+
+        /* Model loading progress */
+        #modelLoad {
+            margin-top: 10px;
+            width: 100%;
+            max-width: 380px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            backdrop-filter: blur(14px);
+            animation: fadeDown 0.4s 0.15s ease both;
+        }
+
+        #modelLoad .label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.65);
+            margin-bottom: 8px;
+        }
+
+        .progress-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #1a4fdb, #4d7dff);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .model-steps {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .model-step {
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .model-step.done {
+            color: #12b76a;
+        }
+
+        .model-step svg {
+            width: 10px;
+            height: 10px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        /* Oval guide */
+        .oval-zone {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            position: relative;
+        }
+
+        .oval-guide {
+            position: relative;
+            width: 220px;
+            height: 280px;
+        }
+
+        .oval-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .oval-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.1);
+            stroke-width: 1.2;
+        }
+
+        .oval-ring {
+            fill: none;
+            stroke: rgba(77, 125, 255, 0.8);
+            stroke-width: 2.5;
+            stroke-dasharray: 12 5;
+            stroke-linecap: round;
+            animation: spinRing 7s linear infinite;
+            transform-origin: center;
+        }
+
+        @keyframes spinRing {
+            to {
+                stroke-dashoffset: -85
+            }
+        }
+
+        /* Ring color change on ready */
+        .oval-guide.ready .oval-ring {
+            stroke: rgba(18, 183, 106, 0.85);
+        }
+
+        .corners {
+            position: absolute;
+            inset: -4px;
+        }
+
+        .corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-color: #4d7dff;
+            border-style: solid;
+        }
+
+        .corner.tl {
+            top: 0;
+            left: 0;
+            border-width: 3px 0 0 3px;
+            border-radius: 4px 0 0 0
+        }
+
+        .corner.tr {
+            top: 0;
+            right: 0;
+            border-width: 3px 3px 0 0;
+            border-radius: 0 4px 0 0
+        }
+
+        .corner.bl {
+            bottom: 0;
+            left: 0;
+            border-width: 0 0 3px 3px;
+            border-radius: 0 0 0 4px
+        }
+
+        .corner.br {
+            bottom: 0;
+            right: 0;
+            border-width: 0 3px 3px 0;
+            border-radius: 0 0 4px 0
+        }
+
+        .scan-line {
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            height: 2px;
+            top: 10%;
+            background: linear-gradient(90deg, transparent, rgba(77, 125, 255, 0.9), transparent);
+            border-radius: 2px;
+            animation: scanMove 2s ease-in-out infinite;
+        }
+
+        @keyframes scanMove {
+            0% {
+                top: 10%;
+                opacity: 0
+            }
+
+            8% {
+                opacity: 1
+            }
+
+            92% {
+                opacity: 1
+            }
+
+            100% {
+                top: 90%;
+                opacity: 0
+            }
+        }
+
+        .c-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(77, 125, 255, 0.7);
+            box-shadow: 0 0 12px rgba(77, 125, 255, 0.5);
+        }
+
+        /* Tips */
+        .tips {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 18px;
+            width: 100%;
+            max-width: 380px;
+            justify-content: center;
+            animation: fadeUp 0.45s 0.1s ease both;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .tip {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 13px;
+            padding: 9px 5px;
+            backdrop-filter: blur(12px);
+        }
+
+        .tip svg {
+            width: 15px;
+            height: 15px;
+            stroke: #99bbff;
+            fill: none;
+            stroke-width: 1.8;
+        }
+
+        .tip span {
+            font-size: 9.5px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.62);
+            text-align: center;
+        }
+
+        /* Controls */
+        .controls {
+            width: 100%;
+            max-width: 420px;
+            padding: 0 32px 52px;
+            animation: fadeUp 0.45s 0.15s ease both;
+        }
+
+        .ctrl-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ctrl-side {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(14px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.18s, background 0.18s;
+        }
+
+        .ctrl-side:hover {
+            background: rgba(26, 79, 219, 0.3);
+        }
+
+        .ctrl-side:active {
+            transform: scale(0.9);
+        }
+
+        .ctrl-side svg {
+            width: 22px;
+            height: 22px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 1.8;
+        }
+
+        .capture-btn {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, var(--blue), var(--blue-light));
+            box-shadow: 0 0 0 6px rgba(77, 125, 255, 0.17), 0 12px 34px rgba(26, 79, 219, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.18s, box-shadow 0.18s;
+        }
+
+        .capture-btn svg {
+            width: 30px;
+            height: 30px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 1.7;
+        }
+
+        .capture-btn:hover {
+            transform: scale(1.06);
+        }
+
+        .capture-btn:active {
+            transform: scale(0.93);
+        }
+
+        .capture-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Processing overlay */
+        #processingOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 15;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 18px;
+            background: rgba(8, 15, 36, 0.76);
+            backdrop-filter: blur(6px);
+        }
+
+        #processingOverlay.show {
+            display: flex;
+            animation: fadeIn 0.2s ease both;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0
+            }
+
+            to {
+                opacity: 1
+            }
+        }
+
+        .proc-ring {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 4px solid rgba(77, 125, 255, 0.2);
+            border-top-color: var(--blue-light);
+            animation: spin 0.9s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .proc-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #99bbff;
+            text-align: center;
+        }
+
+        /* Result sheet */
+        #resultOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            background: rgba(8, 15, 36, 0.68);
+            backdrop-filter: blur(6px);
+        }
+
+        #resultOverlay.show {
+            display: flex;
+            animation: fadeIn 0.3s ease both;
+        }
+
+        .result-sheet {
+            width: 100%;
+            max-width: 420px;
+            background: rgba(12, 20, 50, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px 28px 0 0;
+            padding: 30px 28px 52px;
+            backdrop-filter: blur(24px);
+            animation: sheetUp 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes sheetUp {
+            from {
+                transform: translateY(60px);
+                opacity: 0
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1
+            }
+        }
+
+        .result-icon-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .result-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .result-icon svg {
+            width: 34px;
+            height: 34px;
+            fill: none;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .result-icon.success {
+            background: rgba(18, 183, 106, 0.18);
+            border: 2px solid rgba(18, 183, 106, 0.4);
+            box-shadow: 0 0 40px rgba(18, 183, 106, 0.25);
+        }
+
+        .result-icon.success svg {
+            stroke: var(--green);
+        }
+
+        .result-icon.fail {
+            background: rgba(229, 62, 90, 0.18);
+            border: 2px solid rgba(229, 62, 90, 0.4);
+            box-shadow: 0 0 40px rgba(229, 62, 90, 0.25);
+        }
+
+        .result-icon.fail svg {
+            stroke: var(--red);
+        }
+
+        .result-icon::after {
+            content: '';
+            position: absolute;
+            inset: -8px;
+            border-radius: 50%;
+            border: 2px solid;
+            animation: ringPulse 1.4s ease infinite;
+        }
+
+        .result-icon.success::after {
+            border-color: rgba(18, 183, 106, 0.3);
+        }
+
+        .result-icon.fail::after {
+            border-color: rgba(229, 62, 90, 0.3);
+        }
+
+        @keyframes ringPulse {
+            0% {
+                transform: scale(1);
+                opacity: 1
+            }
+
+            100% {
+                transform: scale(1.45);
+                opacity: 0
+            }
+        }
+
+        .result-headline {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+            text-align: center;
+            letter-spacing: -0.3px;
+            margin-bottom: 6px;
+        }
+
+        .result-sub {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.62);
+            text-align: center;
+            margin-bottom: 22px;
+            line-height: 1.5;
+        }
+
+        .result-stu-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 13px 14px;
+            margin-bottom: 22px;
+        }
+
+        .result-stu-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            flex-shrink: 0;
+            background: rgba(26, 79, 219, 0.25);
+            border: 1px solid rgba(77, 125, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: #99bbff;
+        }
+
+        .result-stu-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .result-stu-roll {
+            font-size: 11.5px;
+            color: rgba(255, 255, 255, 0.55);
+            margin-top: 2px;
+        }
+
+        .confidence-tag {
+            margin-left: auto;
+            flex-shrink: 0;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .confidence-tag.high {
+            background: rgba(18, 183, 106, 0.18);
+            color: var(--green);
+            border: 1px solid rgba(18, 183, 106, 0.3);
+        }
+
+        .confidence-tag.low {
+            background: rgba(229, 62, 90, 0.15);
+            color: var(--red);
+            border: 1px solid rgba(229, 62, 90, 0.3);
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-try-again {
+            flex: 1;
+            padding: 14px 0;
+            border-radius: 14px;
+            border: 1.5px solid rgba(255, 255, 255, 0.16);
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            transition: background 0.18s;
+        }
+
+        .btn-try-again:hover {
+            background: rgba(255, 255, 255, 0.07);
+        }
+
+        .btn-try-again svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .btn-confirm {
+            flex: 1.6;
+            padding: 14px 0;
+            border-radius: 14px;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            transition: transform 0.18s, box-shadow 0.18s;
+        }
+
+        .btn-confirm svg {
+            width: 15px;
+            height: 15px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .btn-confirm.success {
+            background: linear-gradient(135deg, #12b76a, #17d47c);
+            box-shadow: 0 8px 24px rgba(18, 183, 106, 0.38);
+        }
+
+        .btn-confirm.fail {
+            background: linear-gradient(135deg, var(--blue), var(--blue-light));
+            box-shadow: 0 8px 24px rgba(26, 79, 219, 0.38);
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-confirm:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            padding: 8px 18px;
+            z-index: 99;
+            font-size: 12.5px;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .toast.green {
+            background: rgba(18, 183, 106, 0.15);
+            border: 1px solid rgba(18, 183, 106, 0.4);
+            color: var(--green);
+        }
+
+        .toast.redcl {
+            background: rgba(229, 62, 90, 0.15);
+            border: 1px solid rgba(229, 62, 90, 0.4);
+            color: var(--red);
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        #canvasEl {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="cam-bg">
+        <video id="videoEl" autoplay playsinline muted></video>
+        <canvas id="canvasEl"></canvas>
+    </div>
+    <div class="vignette"></div>
+
+    <div class="screen">
+        <div class="header">
+            <div class="back-btn" onclick="history.back()"><svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg></div>
+            <div class="header-text">
+                <div class="header-title">Mark Attendance</div>
+                <div class="header-sub">Scan student face to verify</div>
+            </div>
+            <div class="scan-badge"><span class="badge-pulse"></span>AI Scan</div>
+        </div>
+
+        <!-- Student info -->
+        <div class="stu-card">
+            <div class="stu-avatar-sm" id="stuInitials">—</div>
+            <div class="stu-card-info">
+                <div class="stu-card-name" id="stuNameEl">—</div>
+                <div class="stu-card-roll" id="stuRollEl">—</div>
+            </div>
+        </div>
+
+        <!-- Model loading progress -->
+        <div id="modelLoad">
+            <div class="label" id="modelLabel">Loading AI face recognition models…</div>
+            <div class="progress-track">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <div class="model-steps">
+                <div class="model-step" id="step1"><svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 3" />
+                    </svg>Detector</div>
+                <div class="model-step" id="step2"><svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 3" />
+                    </svg>Landmarks</div>
+                <div class="model-step" id="step3"><svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3 3" />
+                    </svg>Recognition</div>
+            </div>
+        </div>
+
+        <!-- Oval guide -->
+        <div class="oval-zone">
+            <div class="oval-guide" id="ovalGuide">
+                <svg class="oval-svg" viewBox="0 0 220 280">
+                    <ellipse class="oval-bg" cx="110" cy="140" rx="106" ry="134" />
+                    <ellipse class="oval-ring" cx="110" cy="140" rx="106" ry="134" />
+                </svg>
+                <div class="corners">
+                    <div class="corner tl"></div>
+                    <div class="corner tr"></div>
+                    <div class="corner bl"></div>
+                    <div class="corner br"></div>
+                </div>
+                <div class="scan-line"></div>
+                <div class="c-dot"></div>
+            </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="tips">
+            <div class="tip"><svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="12" r="5" />
+                    <path d="M12 1v2M12 21v2M1 12h2M21 12h2" />
+                </svg><span>Center face</span></div>
+            <div class="tip"><svg viewBox="0 0 24 24">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                </svg><span>Good lighting</span></div>
+            <div class="tip"><svg viewBox="0 0 24 24">
+                    <path d="M12 2a5 5 0 0 1 5 5" />
+                    <path d="M19 12v4a7 7 0 0 1-14 0V7" />
+                </svg><span>Look ahead</span></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="ctrl-row">
+                <div class="ctrl-side" style="opacity:0;pointer-events:none"><svg viewBox="0 0 24 24">
+                        <path d="M13 2L4.5 13H11L10 22L20.5 11H14L13 2Z" />
+                    </svg></div>
+                <button class="capture-btn" id="captureBtn" onclick="handleCapture()" disabled>
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="4" />
+                        <path
+                            d="M20 7h-2.5L16 5H8L6.5 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
+                    </svg>
+                </button>
+                <div class="ctrl-side" onclick="switchCam()">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M20 7h-4l-2-3H10L8 7H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1z" />
+                        <path d="M8 13l2 2 2-2M14 11l-2-2-2 2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing -->
+    <div id="processingOverlay">
+        <div class="proc-ring"></div>
+        <div class="proc-label" id="procLabel">Analysing face…</div>
+    </div>
+
+    <!-- Result -->
+    <div id="resultOverlay">
+        <div class="result-sheet">
+            <div class="result-icon-wrap">
+                <div class="result-icon" id="resultIcon"></div>
+            </div>
+            <div class="result-headline" id="resultHeadline">—</div>
+            <div class="result-sub" id="resultSub">—</div>
+            <div class="result-stu-card">
+                <div class="result-stu-avatar" id="resultAvatar">—</div>
+                <div>
+                    <div class="result-stu-name" id="resultName">—</div>
+                    <div class="result-stu-roll" id="resultRoll">—</div>
+                </div>
+                <div class="confidence-tag" id="confTag">—</div>
+            </div>
+            <div class="result-actions">
+                <button class="btn-try-again" onclick="tryAgain()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M1 4v6h6M3.51 15a9 9 0 1 0 .49-4" />
+                    </svg>
+                    Try Again
+                </button>
+                <button class="btn-confirm" id="confirmBtn" onclick="confirmResult()" disabled>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    <span id="confirmLabel">Mark Present</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ── URL params ──
+        const params = new URLSearchParams(window.location.search);
+        const studentId = params.get('student_id');
+        const subjectId = params.get('subject_id');
+        const subjectNameParam = decodeURIComponent(params.get('subject_name') || 'Class');
+        const startPeriod = parseInt(params.get('start_period')) || null;
+        const endPeriod = parseInt(params.get('end_period')) || null;
+        const stuName = decodeURIComponent(params.get('name') || 'Student');
+        const stuRoll = params.get('roll') || '—';
+        const initials = stuName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+        // Fill UI
+        document.getElementById('stuNameEl').textContent = stuName;
+        document.getElementById('stuRollEl').textContent = stuRoll;
+        document.getElementById('stuInitials').textContent = initials;
+        document.getElementById('resultName').textContent = stuName;
+        document.getElementById('resultRoll').textContent = stuRoll;
+        document.getElementById('resultAvatar').textContent = initials;
+
+        const MODEL_URL = 'models'; // Local models — no internet needed
+        const MATCH_THRESHOLD = 0.5; // Step 4 — Fix face match threshold
+        let stream = null;
+        let facingMode = 'user';
+        let modelsLoaded = false;
+        let currentUser = null;
+        let studentUid = null;
+        let storedDescriptor = null;  // Float32Array — from student's face_image_url
+        let lastDistance = null;
+        let lastIsMatch = false;
+
+        // ── Auth guard + startup ──
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['teacher', 'admin']);
+            if (!session) return;
+            currentUser = session.user;
+
+            await startCamera();
+            await loadModels();
+            await preloadStoredFace();
+        });
+
+        // ── Camera ──
+        async function startCamera() {
+            try {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode, width: { ideal: 320 }, height: { ideal: 240 } }, audio: false
+                });
+                const videoEl = document.getElementById('videoEl');
+                videoEl.srcObject = stream;
+                videoEl.play();
+            } catch (e) {
+                console.warn('Camera unavailable:', e.message);
+                document.querySelector('.cam-bg').style.background = 'linear-gradient(160deg,#0d1b3e,#131f4a)';
+            }
+        }
+
+        async function switchCam() {
+            facingMode = facingMode === 'user' ? 'environment' : 'user';
+            await startCamera();
+        }
+
+        // ── Load face-api.js models ──
+        function setStep(n) {
+            const el = document.getElementById(`step${n}`);
+            el.classList.add('done');
+            el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>${el.textContent.trim()}`;
+            document.getElementById('progressBar').style.width = `${(n / 3) * 100}%`;
+        }
+
+        async function loadModels() {
+            if (window.modelsLoaded) return;
+            try {
+                document.getElementById('modelLabel').textContent = 'Loading face detector…';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                setStep(1);
+
+                document.getElementById('modelLabel').textContent = 'Loading landmark model…';
+                await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+                setStep(2);
+
+                document.getElementById('modelLabel').textContent = 'Loading recognition model…';
+                await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+                setStep(3);
+
+                window.modelsLoaded = true;
+                modelsLoaded = true;
+                document.getElementById('modelLabel').textContent = '✓ AI models ready';
+                document.getElementById('ovalGuide').classList.add('ready');
+                document.getElementById('progressBar').style.background = 'linear-gradient(90deg,#12b76a,#17d47c)';
+
+                // Enable capture only if models loaded
+                checkReady();
+            } catch (e) {
+                document.getElementById('modelLabel').textContent = '⚠ Model load failed — using fallback';
+                modelsLoaded = false;
+                checkReady();
+            }
+        }
+
+        // ── Pre-load stored face descriptor ──
+        async function preloadStoredFace() {
+            if (!studentId) return;
+            try {
+                const { data } = await sb.from('students').select('uid, face_descriptor, face_image_url').eq('id', studentId).maybeSingle();
+                if (!data) return;
+
+                studentUid = data.uid;
+
+                // Try to use pre-calculated descriptor if available
+                if (data.face_descriptor) {
+                    storedDescriptor = new Float32Array(data.face_descriptor);
+                    return;
+                }
+
+                // Fallback to recalculating form image
+                if (data.face_image_url) {
+                    const img = await faceapi.fetchImage(data.face_image_url);
+                    const det = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
+                    if (det) storedDescriptor = det.descriptor;
+                }
+            } catch (e) {
+                console.warn('Could not load stored face:', e.message);
+            }
+            checkReady();
+        }
+
+        function checkReady() {
+            const ready = modelsLoaded;
+            document.getElementById('captureBtn').disabled = !ready;
+
+            if (ready && storedDescriptor) {
+                // Instantly begin background detection loop
+                startAutoScan();
+            }
+        }
+
+        // ── 3D Distance Helper ──
+        function euclideanDistance(arr1, arr2) {
+            if (arr1.length !== arr2.length) return 1.0;
+            let sum = 0;
+            for (let i = 0; i < arr1.length; i++) {
+                sum += Math.pow(arr1[i] - arr2[i], 2);
+            }
+            return Math.sqrt(sum);
+        }
+
+        // ── Eye Aspect Ratio (EAR) Helper ──
+        function getEAR(eye) {
+            // eye is an array of 6 points: [p1, p2, p3, p4, p5, p6]
+            const vertical1 = Math.hypot(eye[1].x - eye[5].x, eye[1].y - eye[5].y);
+            const vertical2 = Math.hypot(eye[2].x - eye[4].x, eye[2].y - eye[4].y);
+            const horizontal = Math.hypot(eye[0].x - eye[3].x, eye[0].y - eye[3].y);
+            return (vertical1 + vertical2) / (2.0 * horizontal);
+        }
+
+        // ── Capture & compare (Real-Time Ultra Fast) ──
+        let scanInterval = null;
+        let lastRun = 0;
+        let isMatched = false;
+        const fastOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+
+        function startAutoScan() {
+            if (scanInterval) return;
+            const videoElement = document.getElementById('videoEl');
+            scanInterval = setInterval(() => detectFace(videoElement), 150);
+        }
+
+        async function detectFace(video) {
+            if (isMatched) return;
+
+            const now = Date.now();
+            if (now - lastRun < 150) return;
+            lastRun = now;
+
+            try {
+                // Step 5 — Handle single face only
+                const detections = await faceapi
+                    .detectAllFaces(video, fastOptions)
+                    .withFaceLandmarks()
+                    .withFaceDescriptors();
+
+                if (detections.length === 0) return;
+                
+                if (detections.length > 1) {
+                    showToast('⚠ Multiple faces detected. Please scan alone.', 'redcl');
+                    return;
+                }
+
+                const result = detections[0];
+                const distance = euclideanDistance(result.descriptor, storedDescriptor);
+                
+                // Step 7 — Calculate match percentage: match = (1 - distance) * 100
+                const matchPercent = Math.round((1 - distance) * 100);
+
+                if (distance < MATCH_THRESHOLD) {
+                    isMatched = true;
+                    clearInterval(scanInterval);
+
+                    // Show processing to indicate success lock-in
+                    document.getElementById('processingOverlay').classList.add('show');
+                    document.getElementById('procLabel').textContent = `Face Verified: ${matchPercent}% ✅`;
+                    document.querySelector('.proc-ring').style.borderColor = '#12b76a';
+                    document.querySelector('.proc-ring').style.borderTopColor = '#17d47c';
+
+                    // Proceed to save automatically if match >= 60% (Step 7)
+                    if (matchPercent >= 60) {
+                        setTimeout(() => {
+                            document.getElementById('processingOverlay').classList.remove('show');
+                            lastIsMatch = true;
+                            confirmResult();
+                        }, 800);
+                    } else {
+                        // Show result for manual confirmation if match is border-line (50-60%)
+                        setTimeout(() => {
+                            document.getElementById('processingOverlay').classList.remove('show');
+                            showResult(true, distance);
+                        }, 800);
+                    }
+                }
+            } catch (e) {
+                console.error('Detection loop error:', e);
+            }
+        }
+
+        // Manual override 
+        async function handleCapture() {
+            // Only allow manual if auto hasn't caught it yet
+            if (isMatched) return;
+            showResult(false, 1.0, "Couldn't match face automatically. Ensure good lighting.");
+        }
+
+        function showResult(isMatch, distance, livenessMsg = null) {
+            const icon = document.getElementById('resultIcon');
+            const headline = document.getElementById('resultHeadline');
+            const sub = document.getElementById('resultSub');
+            const confTag = document.getElementById('confTag');
+            const confirmBtn = document.getElementById('confirmBtn');
+            const confirmLbl = document.getElementById('confirmLabel');
+
+            // Step 7 — Calculate match percentage
+            const confidence = Math.round((1 - distance) * 100);
+
+            if (isMatch) {
+                icon.className = 'result-icon success';
+                icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>`;
+                headline.textContent = 'Attendance Marked ✅';
+                sub.textContent = `Verified ${stuName} (${confidence}% Match).`;
+                confTag.className = 'confidence-tag high';
+                confTag.textContent = `${confidence}% match`;
+                confirmBtn.className = 'btn-confirm success';
+                confirmLbl.textContent = 'Confirm Present';
+            } else {
+                icon.className = 'result-icon fail';
+                icon.innerHTML = `<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+                headline.textContent = 'Face Not Matched ❌';
+
+                if (livenessMsg) {
+                    sub.textContent = livenessMsg;
+                } else {
+                    sub.textContent = storedDescriptor
+                        ? `Match: ${confidence}% — Threshold: 50%. Try better lighting.`
+                        : `No stored face data for ${stuName}.`;
+                }
+
+                confTag.className = 'confidence-tag low';
+                confTag.textContent = `${confidence}% match`;
+                confirmBtn.className = 'btn-confirm fail';
+                confirmLbl.textContent = 'Mark Absent';
+            }
+
+            confirmBtn.disabled = false;
+            document.getElementById('resultOverlay').classList.add('show');
+        }
+
+        function tryAgain() {
+            document.getElementById('resultOverlay').classList.remove('show');
+            isMatched = false;
+            lastIsMatch = false;
+            startAutoScan();
+        }
+
+        // ── Save attendance to Supabase ──
+        async function confirmResult() {
+            const btn = document.getElementById('confirmBtn');
+            btn.disabled = true;
+            btn.querySelector('span') && (btn.querySelector('span').textContent = 'Saving…');
+
+            const status = lastIsMatch ? 'present' : 'absent';
+            // Use local date in Asia/Kolkata for RLS compatibility
+            const today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }).split(',')[0];
+
+            if (studentId && subjectId) {
+                const sP = startPeriod || 1;
+                const eP = endPeriod || sP;
+                const entries = [];
+                
+                for (let p = sP; p <= eP; p++) {
+                    entries.push({
+                        student_id: studentId,
+                        subject_id: subjectId,
+                        date: today,
+                        period: 'P' + p,
+                        period_count: 1,
+                        status: status,
+                        marked_by: currentUser.id
+                    });
+                }
+
+                const { error } = await sb.from('attendance').upsert(entries, { onConflict: 'student_id,subject_id,date,period' });
+
+                if (error) {
+                    showToast('DB error: ' + error.message, 'redcl');
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Step 2 — Sync status to sessionStorage for immediate UI update on return
+                sessionStorage.setItem('attendance_update_' + studentId, status);
+
+                // ── Trigger Notification to Student ──
+                if (studentUid) {
+                    await NotificationService.send({
+                        title: status === 'present' ? 'Attendance Marked: Present ✅' : 'Attendance Marked: Absent ❌',
+                        message: `You were marked ${status} for ${subjectNameParam} (Period: ${sP}${eP !== sP ? '–' + eP : ''})`,
+                        target_user_id: studentUid,
+                        type: status === 'present' ? 'success' : 'error',
+                        action_url: 'dashboard.html'
+                    });
+                }
+            }
+
+            document.getElementById('resultOverlay').classList.remove('show');
+            showToast(status === 'present' ? `✓ ${stuName} marked Present` : `${stuName} marked Absent`, 'green');
+            setTimeout(() => history.back(), 1600);
+        }
+
+        function showToast(msg, cls = 'green') {
+            const t = document.getElementById('toast');
+            t.className = `toast ${cls} show`;
+            t.textContent = msg;
+            setTimeout(() => t.classList.remove('show'), 2800);
+        }
+    </script>
+</body>
+
+</html>

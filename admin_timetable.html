@@ -1,0 +1,2185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Manage Timetable — SVPP AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <style>
+        /* ── Toast Notification ──────────────────────── */
+        #tt-toast {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            min-width: 260px;
+            max-width: 380px;
+            padding: 14px 20px 14px 16px;
+            border-radius: 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+
+        #tt-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        #tt-toast.success {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+        }
+
+        #tt-toast.error {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+
+        #tt-toast.info {
+            background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+        }
+
+        #tt-toast .tt-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        #tt-toast .tt-msg {
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 600px) {
+            #tt-toast {
+                right: 12px;
+                left: 12px;
+                min-width: unset;
+                bottom: 16px;
+            }
+        }
+
+        /* ── Base Reset & Variables ──────────────────── */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px 20px 140px;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            padding-top: 20px;
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            color: var(--tp);
+            text-decoration: none;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header-sub {
+            font-size: 14px;
+            color: var(--ts);
+            font-weight: 600;
+        }
+
+        /* Setup Card */
+        .setup-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            margin-bottom: 24px;
+        }
+
+        .row-inputs {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .row-inputs {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .branch-locked {
+            background: #f8faff;
+            border: 2px solid var(--blue-border);
+            border-radius: 14px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--blue);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        select {
+            background: #f8faff;
+            border: 2px solid #edf2f7;
+            border-radius: 14px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tp);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .setup-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .setup-btn-group {
+            display: flex;
+            gap: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .setup-actions {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 20px;
+            }
+
+            .setup-btn-group {
+                flex-direction: column;
+            }
+
+            .setup-btn-group button {
+                width: 100%;
+            }
+        }
+
+        .toggle-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .toggle {
+            width: 44px;
+            height: 24px;
+            background: #e2e8f0;
+            border-radius: 12px;
+            position: relative;
+            transition: 0.3s;
+        }
+
+        .toggle.on {
+            background: var(--blue);
+        }
+
+        .toggle-ball {
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: 0.3s;
+        }
+
+        .toggle.on .toggle-ball {
+            transform: translateX(20px);
+        }
+
+        .toggle-lbl {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ts);
+        }
+
+        /* Grid */
+        .grid-container {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tt-grid {
+            display: grid;
+            gap: 8px;
+            width: max-content;
+            min-width: 100%;
+        }
+
+        .tt-th {
+            background: #f8faff;
+            padding: 14px;
+            border-radius: 14px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--blue);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tt-row-label {
+            background: #f8faff;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 800;
+            padding: 14px;
+            border-radius: 14px;
+            text-align: center;
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tt-cell {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            height: 80px;
+            width: 100%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            transition: 0.2s;
+            box-sizing: border-box;
+        }
+
+        .tt-cell.selected {
+            border-width: 2.5px;
+            border-color: var(--blue);
+            background: var(--blue-soft);
+            z-index: 25;
+            transform: scale(1.05);
+        }
+
+        .cell-subj {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell-subj .code {
+            font-size: 9px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .c-lunch {
+            background: #475569 !important;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+
+        /* Palette */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .palette {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-radius: 32px 32px 0 0;
+            padding: 24px 20px 40px;
+            z-index: 1100;
+            transform: translateY(100%);
+            transition: 0.4s cubic-bezier(0.2, 1, 0.3, 1);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .palette.show {
+            transform: translateY(0);
+        }
+
+        .p-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 12px;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+
+        .chip {
+            padding: 16px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            min-height: 80px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .chip:active {
+            transform: scale(0.95);
+        }
+
+        .chip .c-code {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+
+        /* Helpers */
+        .bg-color-0 {
+            background: #3b82f6;
+        }
+
+        .bg-color-1 {
+            background: #10b981;
+        }
+
+        .bg-color-2 {
+            background: #8b5cf6;
+        }
+
+        .bg-color-3 {
+            background: #f59e0b;
+        }
+
+        .bg-color-4 {
+            background: #ec4899;
+        }
+
+        .bg-color-5 {
+            background: #06b6d4;
+        }
+
+        .bg-lunch {
+            background: #475569;
+        }
+
+        .bg-clear {
+            background: #fff;
+            color: #ef4444;
+            border: 2px dashed #ef4444;
+        }
+
+        .btn-save:active,
+        .btn-delete-all:active {
+            transform: scale(0.95);
+        }
+
+        /* ── Bottom Action Buttons Container ── */
+        .bottom-actions-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            .bottom-actions-container {
+                left: 20px;
+                right: 20px;
+                bottom: 20px;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .bottom-actions-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+
+        .loader {
+            display: none;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(26, 79, 219, 0.1);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .ghost {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ts);
+            display: none;
+        }
+
+        .ghost a {
+            color: var(--blue);
+            font-weight: 700;
+            margin-top: 12px;
+            display: block;
+        }
+
+        /* ── Manage Periods UI Fix (Scoped) ───────── */
+        .modal-time-fix input[type="time"],
+        .modal-time-fix input[type="text"] {
+            width: 110px;
+            padding: 10px 12px;
+            font-size: 14px;
+            border-radius: 10px;
+            border: 1px solid #E2E8F0;
+            text-align: center;
+            background: #F8FAFC;
+        }
+
+        .modal-time-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .modal-time-arrow {
+            font-weight: bold;
+            color: #64748B;
+            font-size: 18px;
+        }
+
+        .modal-time-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .modal-time-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .modal-time-row input[type="text"] {
+                width: 100%;
+                text-align: left;
+            }
+
+            .modal-time-group {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                width: 100%;
+            }
+
+            .modal-mobile-actions {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding-top: 8px;
+                border-top: 1px dashed #eee;
+            }
+        }
+
+        /* ── Wheel Time Picker Redesign ────────── */
+        .time-display {
+            padding: 10px 14px;
+            border-radius: 12px;
+            background: #F1F5F9;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            color: var(--tp);
+            border: 1px solid #E2E8F0;
+            min-width: 105px;
+            text-align: center;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .time-display:hover {
+            border-color: var(--blue);
+            background: #fff;
+        }
+
+        .wheel-picker-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: 0.2s ease;
+        }
+
+        .wheel-picker-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .wheel-picker-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            width: 280px;
+            padding: 20px;
+            position: relative;
+            transform: translateY(20px);
+            transition: 0.3s cubic-bezier(0.2, 1.2, 0.4, 1);
+        }
+
+        .wheel-picker-overlay.show .wheel-picker-card {
+            transform: translateY(0);
+        }
+
+        .wheel-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            height: 150px;
+            margin: 15px 0;
+            position: relative;
+            mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent);
+        }
+
+        .wheel-selection-highlight {
+            position: absolute;
+            height: 40px;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--blue-soft);
+            border-radius: 10px;
+            z-index: 0;
+        }
+
+        .wheel {
+            flex: 1;
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            z-index: 1;
+        }
+
+        .wheel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .wheel-item {
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            scroll-snap-align: center;
+            font-size: 18px;
+            font-weight: 500;
+            color: #64748B;
+            transition: 0.2s;
+        }
+
+        .wheel-item.active {
+            color: var(--blue);
+            font-weight: 800;
+            font-size: 22px;
+        }
+
+        .ampm-choice {
+            display: flex;
+            background: #F1F5F9;
+            border-radius: 12px;
+            padding: 4px;
+            margin: 10px 0 20px;
+        }
+
+        .ampm-choice button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 10px;
+            font-weight: 800;
+            border-radius: 9px;
+            cursor: pointer;
+            color: var(--ts);
+            font-size: 13px;
+        }
+
+        .ampm-choice button.active {
+            background: var(--blue);
+            color: white;
+            box-shadow: 0 4px 10px rgba(26, 79, 219, 0.2);
+        }
+
+        .picker-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .picker-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .btn-cancel-p {
+            background: #F1F5F9;
+            color: var(--ts);
+        }
+
+        .btn-confirm-p {
+            background: var(--blue);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .wheel-picker-overlay {
+                align-items: flex-end;
+            }
+
+            .wheel-picker-card {
+                width: 100%;
+                border-radius: 24px 24px 0 0;
+                transform: translateY(100%);
+            }
+
+            .wheel-picker-overlay.show .wheel-picker-card {
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Duration Selector (Multi-Period) ── */
+        .duration-selector {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            padding: 4px;
+            background: #f1f5f9;
+            border-radius: 16px;
+            width: fit-content;
+        }
+
+        .duration-pill {
+            padding: 8px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--ts);
+            border: none;
+            background: transparent;
+        }
+
+        .duration-pill.active {
+            background: var(--blue);
+            color: white;
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.2);
+        }
+
+        /* ── Confirmation Modal ── */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 27, 62, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+            transition: opacity 0.3s;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-card {
+            background: #fff;
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        .modal-card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 8px;
+        }
+
+        .modal-card p {
+            font-size: 14px;
+            color: var(--ts);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        #cancelBtn {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        #deleteConfirmBtn {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        /* Responsive Delete All Button overrides */
+        .btn-delete-all {
+            padding: 16px 32px;
+            border-radius: 20px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            font-weight: 800;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+            transition: 0.2s;
+        }
+
+        .btn-save {
+            padding: 16px 32px;
+            border-radius: 20px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            font-weight: 800;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(26, 79, 219, 0.3);
+            transition: 0.2s;
+        }
+
+        /* ── Subject Summary Table ── */
+        .summary-section {
+            margin-top: 40px;
+            background: var(--card);
+            border-radius: 28px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 16px;
+        }
+
+        .summary-header h3 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--tp);
+        }
+
+        .summary-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-export {
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            color: var(--ts);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: 0.2s;
+        }
+
+        .btn-export:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+            background: var(--blue-soft);
+        }
+
+        .summary-table-cont {
+            overflow-x: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .summary-table th {
+            background: #f8faff;
+            padding: 14px 16px;
+            font-weight: 800;
+            color: var(--blue);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .summary-table td {
+            padding: 14px 16px;
+            border-top: 1px solid var(--border);
+            color: var(--tp);
+            font-weight: 600;
+        }
+
+        .summary-table tr:hover {
+            background: #fcfdfe;
+        }
+
+        @media (max-width: 600px) {
+            .summary-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .summary-actions {
+                width: 100%;
+            }
+            .summary-actions button {
+                flex: 1;
+            }
+        }
+
+        /* Print styles */
+        @media print {
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; padding: 0; }
+            .summary-actions { display: none; }
+            .back-btn, .setup-card, .grid-container, .bottom-actions-container, #satCopyWrap { display: none !important; }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="page">
+        <div class="header">
+            <a href="javascript:void(0)"
+                onclick="if(document.referrer) { history.back(); } else { window.location.href='admin_dashboard.html'; }"
+                class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <div>
+                <div class="header-title">Timetable Builder</div>
+                <div class="header-sub">Manage academic schedules</div>
+            </div>
+        </div>
+
+        <div class="setup-card">
+            <div class="row-inputs">
+                <div class="input-group">
+                    <label>Branch</label>
+                    <div class="branch-locked">AI <span>🔒</span></div>
+                </div>
+                <div class="input-group">
+                    <label>Year</label>
+                    <select id="selYear">
+                        <option value="1">Year 1</option>
+                        <option value="2">Year 2</option>
+                        <option value="3">Year 3</option>
+                        <option value="4">Year 4</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Semester</label>
+                    <select id="selSem">
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Section</label>
+                    <select id="selSection">
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+            </div>
+            <div class="setup-actions">
+                <div class="toggle-wrap" onclick="toggleSaturday()">
+                    <div class="toggle" id="satToggle">
+                        <div class="toggle-ball"></div>
+                    </div>
+                    <span class="toggle-lbl">Include Saturday</span>
+                </div>
+                <div class="setup-btn-group">
+                    <button onclick="openManagePeriods()" class="btn-save"
+                        style="padding: 12px 24px; background:var(--blue-mid);">Manage Periods</button>
+                    <button onclick="loadTimetable()" class="btn-save" style="padding: 12px 24px;">Load
+                        Configuration</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+        </div>
+
+        <div id="ghost" class="ghost">
+            <p>No subjects found for this configuration.</p>
+            <a href="admin_subjects.html">Go to Add Subjects →</a>
+        </div>
+
+        <div id="gridCont" style="display: none;">
+            <!-- Saturday Copy UI -->
+            <div id="satCopyWrap"
+                style="display:none; align-items:center; gap:12px; margin-bottom:16px; background:var(--card); padding:12px 20px; border-radius:18px; border:1px solid var(--border); width: fit-content;">
+                <span class="toggle-lbl" style="color:var(--blue); font-size:12px;">Copy Timetable For Saturday:</span>
+                <select id="satCopySelect" onchange="handleSaturdayCopy(this.value)"
+                    style="padding: 6px 12px; border-radius: 10px; border: 1.5px solid var(--border); font-size: 13px;">
+                    <option value="Custom">Custom</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                </select>
+            </div>
+
+            <div id="printableArea" style="background:var(--bg); border-radius:28px; padding:10px;">
+                <div class="grid-container">
+                    <div id="ttGrid" class="tt-grid"></div>
+                </div>
+
+                <!-- Subject Summary Section -->
+                <div id="summarySection" class="summary-section" style="display: none;">
+                    <div class="summary-header">
+                        <h3>Subject Summary</h3>
+                        <div class="summary-actions">
+                            <button onclick="exportFullPDF()" class="btn-export" style="background: var(--blue); color: white; border-color: var(--blue);">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                Export Full PDF
+                            </button>
+                            <button onclick="exportSummaryToExcel()" class="btn-export">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                Export Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="summary-table-cont">
+                        <table class="summary-table">
+                            <thead>
+                                <tr>
+                                    <th>Sub Code</th>
+                                    <th>Subject Name</th>
+                                    <th>Teacher Name</th>
+                                    <th>Mobile Number</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryBody">
+                                <!-- Rows loaded via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-actions-container">
+        <button id="btnDeleteAll" onclick="confirmDeleteAll()" class="btn-delete-all">Delete All</button>
+        <button id="btnSave" onclick="saveTimetable()" class="btn-save">Save Changes</button>
+    </div>
+
+    <!-- Delete All Confirmation Modal -->
+    <div id="deleteModal" class="modal hidden">
+        <div class="modal-card">
+            <div style="font-size:3rem; margin-bottom:12px;">🗑️</div>
+            <h3>Delete Entire Timetable?</h3>
+            <p>Are you sure you want to delete the entire timetable for this configuration? This action cannot be
+                undone.</p>
+            <div class="modal-actions">
+                <button id="cancelBtn" onclick="closeDeleteModal()">Cancel</button>
+                <button id="deleteConfirmBtn" onclick="deleteAllTimetable()">Delete All</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="periodModalBg" class="backdrop" onclick="closeManagePeriods()"></div>
+    <div id="periodModal" class="palette modal-time-fix" style="max-height: 90vh; height:auto;">
+        <div
+            style="display: flex; justify-content: space-between; align-items: center; padding-bottom:16px; border-bottom:1px solid var(--border);">
+            <h3 style="font-size: 16px; font-weight: 800; color: var(--tp);">Manage Periods</h3>
+            <span onclick="closeManagePeriods()" style="cursor: pointer; padding: 8px;">✕</span>
+        </div>
+        <div id="periodList"
+            style="padding: 16px 0; display:flex; flex-direction:column; gap:12px; overflow-y:auto; max-height:50vh;">
+            <!-- period rows go here -->
+        </div>
+        <button onclick="addPeriodRow()"
+            style="padding:12px; border-radius:12px; border:2px dashed var(--border); background:var(--bg); cursor:pointer; font-weight:700; color:var(--blue); margin-bottom:16px;">+
+            Add Period</button>
+        <button onclick="savePeriods()" class="btn-save" style="position:static; width:100%;">Save Periods</button>
+    </div>
+
+    <!-- ── Wheel Picker UI Singleton ────────── -->
+    <div id="wheelPickerOverlay" class="wheel-picker-overlay">
+        <div class="wheel-picker-card">
+            <h4 style="font-size: 15px; font-weight: 800; color: var(--tp); text-align: center; margin-bottom: 5px;">
+                Select Time</h4>
+            <div class="wheel-container">
+                <div class="wheel-selection-highlight"></div>
+                <div class="wheel" id="wheelHH"></div>
+                <span>:</span>
+                <div class="wheel" id="wheelMM"></div>
+            </div>
+            <div class="ampm-choice">
+                <button type="button" id="btnAM" onclick="setPickerAMPM('AM')">AM</button>
+                <button type="button" id="btnPM" onclick="setPickerAMPM('PM')">PM</button>
+            </div>
+            <div class="picker-actions">
+                <button type="button" class="btn-cancel-p" onclick="closeWheelPicker()">Cancel</button>
+                <button type="button" class="btn-confirm-p" onclick="confirmWheelPicker()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="backdrop" class="backdrop" onclick="closePalette()"></div>
+    <div id="palette" class="palette">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="font-size: 14px; text-transform: uppercase; color: var(--ts); letter-spacing: 1px;">Pick Subject
+            </h3>
+            <span onclick="closePalette()" style="cursor: pointer; padding: 8px;">✕</span>
+        </div>
+        <div class="p-grid" id="paletteGrid"></div>
+    </div>
+
+    <script>
+        const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        let dynamicPeriods = [];
+        const FIXED_BRANCH = "AI";
+
+        let includeSaturday = false;
+        let subjectsDB = [];
+        let teachersDB = [];
+        let globalWorkloadDB = []; // All teacher_workload rows — manual assignments from admin_teacher_availability.html
+        let gridData = {}; // Now stores { subject_id, teacher_id: ... }
+        let selectedCell = null;
+        let pendingSubject = null;
+        let selectedDuration = 1;
+
+        window.onload = async () => {
+            await protectRoute(['admin']);
+            document.getElementById('selYear').onchange = loadTimetable;
+            document.getElementById('selSem').onchange = loadTimetable;
+            document.getElementById('selSection').onchange = loadTimetable;
+            loadTimetable();
+        };
+
+        function toggleSaturday() {
+            includeSaturday = !includeSaturday;
+            document.getElementById('satToggle').classList.toggle('on', includeSaturday);
+            document.getElementById('satCopyWrap').style.display = includeSaturday ? 'flex' : 'none';
+            if (!includeSaturday) {
+                document.getElementById('satCopySelect').value = 'Custom';
+                // Clear saturday data in gridData when disabled
+                if (gridData['Saturday']) {
+                    gridData['Saturday'] = Array(dynamicPeriods.length).fill(null);
+                }
+            }
+            renderGrid();
+        }
+
+        function handleSaturdayCopy(day) {
+            if (day === 'Custom') return;
+
+            if (gridData[day]) {
+                // deep copy the objects
+                gridData['Saturday'] = gridData[day].map(val => val ? { ...val } : null);
+                renderGrid();
+                showToast(`Copied ${day}'s schedule to Saturday`, 'info');
+            }
+        }
+
+        // --- DELETE ALL LOGIC ---
+        function confirmDeleteAll() {
+            document.getElementById('deleteModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+        }
+
+        function deleteAllTimetable() {
+            DAYS.forEach(day => {
+                gridData[day] = Array(dynamicPeriods.length).fill(null);
+            });
+            renderGrid();
+            closeDeleteModal();
+            showToast('Timetable cleared successfully.', 'success');
+        }
+
+        function clearGridUI() {
+            gridData = {};
+            // DO NOT clear dynamicPeriods here to prevent layout collapse during reload
+            const grid = document.getElementById('ttGrid');
+            if (grid) grid.innerHTML = '';
+            selectedCell = null;
+            pendingSubject = null;
+            selectedDuration = 1;
+
+            // Palette clear
+            const pal = document.getElementById('paletteGrid');
+            if (pal) pal.innerHTML = '<div style="padding:20px; color:#666;">Loading palette...</div>';
+
+            // Config reset
+            includeSaturday = false;
+            document.getElementById('satToggle').classList.remove('on');
+            document.getElementById('satCopyWrap').style.display = 'none';
+        }
+
+        async function loadTimetable() {
+            clearGridUI();
+
+            const y = document.getElementById('selYear').value;
+            const s = document.getElementById('selSem').value;
+            const sec = document.getElementById('selSection').value;
+            const loader = document.getElementById('loader');
+            const ghost = document.getElementById('ghost');
+            const cont = document.getElementById('gridCont');
+
+            loader.style.display = 'flex'; cont.style.display = 'none'; ghost.style.display = 'none';
+
+            try {
+                // Fetch Subjects
+                const { data: subs, error: subErr } = await sb.from('subjects').select('id, name, code, teacher_id').eq('year', y).eq('semester', s).eq('branch', FIXED_BRANCH);
+                if (subErr) throw subErr;
+
+                if (!subs || subs.length === 0) {
+                    // Do not return early. We might have a timetable saved without active subjects.
+                    // But we show the ghost ONLY if timetable is also empty later.
+                    subjectsDB = [];
+                } else {
+                    subjectsDB = subs;
+                    subjectsDB.forEach((sub, i) => sub.color = `bg-color-${i % 6}`);
+                }
+                // Fetch Teachers
+                const { data: tchs, error: tErr } = await sb.from('authorized_teachers').select('id, name, email, mobile_number');
+                if (tErr) console.error("Could not fetch teachers", tErr);
+                teachersDB = tchs || [];
+
+                // Load explicit period definitions: Try class-specific, then fallback to branch-global
+                const { data: pData, error: pErr } = await sb.from('periods')
+                    .select('*')
+                    .eq('branch', FIXED_BRANCH)
+                    .or(`year.eq.${y},year.is.null`)
+                    .order('order_index', { ascending: true });
+
+                if (pErr) console.error("Could not fetch periods", pErr);
+
+                // Filter logic: Prefer rows with specific year/sem/sec
+                const classSpecific = (pData || []).filter(p => p.year == y && p.semester == s && p.section == sec);
+
+                // Update dynamicPeriods: Use class-specific if found, otherwise fallback to defaults
+                // CRITICAL: We ensure dynamicPeriods always has a valid set to prevent grid collapse
+                if (classSpecific && classSpecific.length > 1) { 
+                    dynamicPeriods = classSpecific.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        start: p.start_time,
+                        end: p.end_time,
+                        isLunch: p.is_lunch === true
+                    }));
+                } else if (!dynamicPeriods || dynamicPeriods.length < 5) {
+                    // Start with a default 7-period set for new classes or if something is missing
+                    dynamicPeriods = [
+                        { name: 'P1', start: '09:00', end: '10:00', isLunch: false },
+                        { name: 'P2', start: '10:00', end: '11:00', isLunch: false },
+                        { name: 'P3', start: '11:00', end: '12:00', isLunch: false },
+                        { name: 'LUNCH', start: '12:00', end: '13:00', isLunch: true },
+                        { name: 'P4', start: '13:00', end: '14:00', isLunch: false },
+                        { name: 'P5', start: '14:00', end: '15:00', isLunch: false },
+                        { name: 'P6', start: '15:00', end: '16:00', isLunch: false }
+                    ];
+                }
+
+                // Fetch timetable config (settings like Saturday)
+                const { data: cfgData } = await sb.from('timetable_config')
+                    .select('include_saturday')
+                    .eq('branch', FIXED_BRANCH).eq('year', y).eq('semester', s).eq('section', sec)
+                    .maybeSingle();
+
+                includeSaturday = cfgData ? cfgData.include_saturday : false;
+                document.getElementById('satToggle').classList.toggle('on', includeSaturday);
+                document.getElementById('satCopyWrap').style.display = includeSaturday ? 'flex' : 'none';
+
+                // ── Fetch teacher_workload (manual assignments from admin_teacher_availability.html)
+                //    Used to check if a teacher is already busy before assigning them here.
+                const lunchPeriodNames = new Set(
+                    dynamicPeriods.filter(p => p.isLunch).map(p => p.name.toUpperCase())
+                );
+                const { data: wData } = await sb.from('teacher_workload')
+                    .select('teacher_id, day, period, year, semester, branch, section, is_manual');
+                globalWorkloadDB = (wData || []).filter(r =>
+                    r.teacher_id && !lunchPeriodNames.has((r.period || '').toUpperCase())
+                );
+
+                gridData = {};
+                DAYS.forEach(day => gridData[day] = Array(dynamicPeriods.length).fill(null));
+
+                const { data: tt } = await sb.from('timetable')
+                    .select('day, period, subject_id, teacher_id, is_lunch')
+                    .eq('year', y).eq('semester', s).eq('branch', FIXED_BRANCH).eq('section', sec);
+
+                if (tt && tt.length > 0) {
+                    tt.forEach(row => {
+                        const fullDay = DAYS.find(d => d.substring(0, 3).toUpperCase() === row.day);
+                        if (fullDay) {
+                            const pIdx = dynamicPeriods.findIndex(p => p.name === row.period);
+                            if (pIdx !== -1) {
+                                // Lunch: is_lunch flag OR null subject_id on a lunch period
+                                if (row.is_lunch || dynamicPeriods[pIdx].isLunch || !row.subject_id) {
+                                    gridData[fullDay][pIdx] = { subject_id: 'Lunch', teacher_id: null };
+                                } else {
+                                    gridData[fullDay][pIdx] = { subject_id: row.subject_id, teacher_id: row.teacher_id };
+                                }
+                            }
+                        }
+                    });
+
+                    // Internal Saturday detection logic removed in favor of explicit config table
+                } else {
+                    // No timetable found, reset defaults but keep classes selected
+                }
+
+                loader.style.display = 'none'; cont.style.display = 'block';
+                document.getElementById('satCopyWrap').style.display = includeSaturday ? 'flex' : 'none';
+                renderGrid(); renderPalette();
+            } catch (err) {
+                console.error(err); loader.style.display = 'none';
+            }
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('ttGrid');
+            grid.innerHTML = '';
+
+            grid.style.gridTemplateColumns = `80px repeat(${dynamicPeriods.length}, 110px)`;
+
+            const headLabel = document.createElement('div');
+            headLabel.className = 'tt-th';
+            headLabel.style.left = '0';
+            headLabel.style.zIndex = '50';
+            headLabel.textContent = 'Day';
+            grid.appendChild(headLabel);
+
+            dynamicPeriods.forEach(p => {
+                const headCell = document.createElement('div');
+                headCell.className = 'tt-th';
+                const pNameEsc = escapeHTML(p.name);
+                const pStartEsc = escapeHTML(p.start);
+                const pEndEsc = escapeHTML(p.end);
+                headCell.innerHTML = `${pNameEsc}<br><span style="font-size:10px; opacity:0.7">${pStartEsc} - ${pEndEsc}</span>`;
+                grid.appendChild(headCell);
+            });
+
+            const renderDays = includeSaturday ? DAYS : DAYS.slice(0, 5);
+
+            renderDays.forEach(day => {
+                const dayLabel = document.createElement('div');
+                dayLabel.className = 'tt-row-label';
+                dayLabel.textContent = day.substring(0, 3).toUpperCase();
+                grid.appendChild(dayLabel);
+
+                dynamicPeriods.forEach((p, pIdx) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'tt-cell';
+                    const val = gridData[day][pIdx];
+
+                    if (selectedCell && selectedCell.day === day && selectedCell.pIdx === pIdx) cell.classList.add('selected');
+
+                    if (p.isLunch) {
+                        cell.innerHTML = `<div class="cell-subj bg-lunch" style="text-align:center;">LUNCH<br><span style="font-size:9px;">${p.start}-${p.end}</span></div>`;
+                    } else if (val && val.subject_id === 'Lunch') {
+                        cell.innerHTML = '<div class="cell-subj bg-lunch">LUNCH</div>';
+                    } else if (val && val.subject_id) {
+                        const sub = subjectsDB.find(x => x.id === val.subject_id);
+                        const tch = teachersDB.find(x => x.id === val.teacher_id);
+                        if (sub) {
+                            let tchName = tch ? tch.name.split(' ')[0] : 'No Teacher';
+                            const subCodeEsc = escapeHTML(sub.code || sub.name.substring(0, 6));
+                            const subNameEsc = escapeHTML(sub.name.substring(0, 12));
+                            const tchNameEsc = escapeHTML(tchName);
+                            const subColorEsc = escapeHTML(sub.color || '');
+
+                            cell.innerHTML = `
+                                <div class="cell-subj ${subColorEsc}">
+                                    ${subCodeEsc}
+                                    <span class="code">${subNameEsc}</span>
+                                    <span class="code" style="color:#ffffff; margin-top:4px; font-weight:900;">${tchNameEsc}</span>
+                                </div>`;
+                        } else {
+                            cell.innerHTML = '<div class="cell-subj" style="background:#eee; color:#aaa">?</div>';
+                        }
+                    }
+
+                    if (!p.isLunch) {
+                        cell.onclick = () => {
+                            selectedCell = { day, pIdx };
+                            document.getElementById('backdrop').classList.add('show');
+                            document.getElementById('palette').classList.add('show');
+                            renderGrid();
+                        };
+                    }
+                    grid.appendChild(cell);
+                });
+            });
+
+            renderSubjectSummary();
+        }
+
+        const subjectNameMap = {
+            '23SE0503': 'Full Stack Development Lab',
+            '23PC0502': 'Digital Logic and Computer Organization',
+            '23PC0506': 'Database Management Systems',
+            '23PC0501': 'Discrete Mathematical Structures',
+            '23PC0503': 'Data Structures and Algorithms',
+            '23PC0504': 'Object Oriented Programming',
+            '23PC0505': 'Computer Organization and Architecture',
+            '23BS0501': 'Engineering Mathematics - III',
+            '23PC0507': 'Operating Systems',
+            '23PC0508': 'Design and Analysis of Algorithms',
+            '23PC0509': 'Software Engineering',
+            '23PC0510': 'Theory of Computation',
+            '23PC0511': 'Data Communication and Networks',
+            '23HS0501': 'Universal Human Values',
+            '23MC0501': 'Environmental Science'
+        };
+
+        function renderSubjectSummary() {
+            const sumBody = document.getElementById('summaryBody');
+            const summarySection = document.getElementById('summarySection');
+            if (!sumBody) return;
+
+            // Extract unique subject + teacher pairs from gridData
+            const uniquePairs = new Set();
+            const summaryRows = [];
+
+            Object.values(gridData).forEach(dayPeriods => {
+                dayPeriods.forEach(p => {
+                    if (p && p.subject_id && p.subject_id !== 'Lunch') {
+                        const key = `${p.subject_id}|${p.teacher_id}`;
+                        if (!uniquePairs.has(key)) {
+                            uniquePairs.add(key);
+                            const sub = subjectsDB.find(s => s.id === p.subject_id);
+                            const tch = teachersDB.find(t => t.id === p.teacher_id);
+                            if (sub) {
+                                // Map to full name if available
+                                const fullName = subjectNameMap[sub.code] || sub.name || 'Unknown';
+                                summaryRows.push({
+                                    code: sub.code || 'N/A',
+                                    name: fullName,
+                                    teacher: tch ? tch.name : 'Not Assigned',
+                                    mobile: tch ? (tch.mobile_number || 'Not Provided') : 'Not Provided'
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+
+            if (summaryRows.length === 0) {
+                summarySection.style.display = 'none';
+                return;
+            }
+
+            // Sort alphabetically by full name
+            summaryRows.sort((a, b) => a.name.localeCompare(b.name));
+
+            summarySection.style.display = 'block';
+            sumBody.innerHTML = summaryRows.map((row) => `
+                <tr>
+                    <td style="font-family: monospace; font-weight: 700;">${escapeHTML(row.code)}</td>
+                    <td>${escapeHTML(row.name)}</td>
+                    <td>${escapeHTML(row.teacher)}</td>
+                    <td style="color:var(--ts); font-size:12px;">${escapeHTML(row.mobile)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportSummaryToExcel() {
+            const y = document.getElementById('selYear').value;
+            const s = document.getElementById('selSem').value;
+            const sec = document.getElementById('selSection').value;
+            
+            const rows = [['SUB CODE', 'SUBJECT NAME', 'TEACHER NAME', 'MOBILE NUMBER']];
+            const tableRows = document.querySelectorAll('#summaryBody tr');
+            tableRows.forEach(tr => {
+                const cells = tr.querySelectorAll('td');
+                rows.push(Array.from(cells).map(c => c.textContent.trim()));
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Subject Summary");
+            XLSX.writeFile(wb, `Timetable_Summary_${FIXED_BRANCH}_Year${y}_Sem${s}_Sec${sec}.xlsx`);
+        }
+
+        function exportSummaryToPDF() {
+            window.print();
+        }
+
+        async function exportFullPDF() {
+            const { jsPDF } = window.jspdf;
+            const element = document.getElementById('printableArea');
+            const toast = showToast('Generating PDF...', 'info');
+
+            try {
+                // Determine dimensions
+                const canvas = await html2canvas(element, {
+                    scale: 2, // Higher quality
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#f1f5ff' // var(--bg)
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save('AI_Timetable.pdf');
+                
+                showToast('✅ PDF exported successfully!', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('❌ PDF export failed', 'error');
+            }
+        }
+
+        function renderPalette() {
+            const grid = document.getElementById('paletteGrid');
+            let html = `
+                <div style="grid-column: 1 / -1; font-size:12px; font-weight:700; color:var(--ts);">1. Select Subject</div>
+                <div class="chip bg-clear" onclick="assignSubject(null, null)">Eraser <span class="c-code">Clear</span></div>
+                <div class="chip bg-lunch" onclick="assignSubject('Lunch', null)">Lunch <span class="c-code">Break</span></div>
+            `;
+            subjectsDB.forEach(s => {
+                const isSel = pendingSubject === s.id;
+                const sNameEsc = escapeHTML(s.name.substring(0, 20));
+                const sCodeEsc = escapeHTML(s.code || '');
+                const sColorEsc = escapeHTML(s.color || '');
+                html += `<div class="chip ${sColorEsc}" style="${isSel ? 'box-shadow: 0 0 0 4px var(--tp); transform:scale(0.95);' : ''}" onclick="selectSubjectForPalette('${s.id}')">${sNameEsc} <span class="c-code">${sCodeEsc}</span></div>`;
+            });
+
+            if (pendingSubject && pendingSubject !== 'Lunch') {
+                html += `
+                    <div style="grid-column: 1 / -1; font-size:12px; font-weight:700; color:var(--ts); margin-top:16px;">2. Duration</div>
+                    <div style="grid-column: 1 / -1;">
+                        <div class="duration-selector">
+                            <button class="duration-pill ${selectedDuration === 1 ? 'active' : ''}" onclick="setDuration(1)">1 Period</button>
+                            <button class="duration-pill ${selectedDuration === 2 ? 'active' : ''}" onclick="setDuration(2)">2 Periods</button>
+                            <button class="duration-pill ${selectedDuration === 3 ? 'active' : ''}" onclick="setDuration(3)">3 Periods</button>
+                        </div>
+                    </div>
+                `;
+
+                html += `<div style="grid-column: 1 / -1; font-size:12px; font-weight:700; color:var(--ts); margin-top:16px;">3. Select Teacher</div>`;
+
+                const y = document.getElementById('selYear').value;
+                const s = document.getElementById('selSem').value;
+                const sec = document.getElementById('selSection').value;
+                const selDayCode = selectedCell.day.substring(0, 3).toUpperCase();
+                const selPeriodName = dynamicPeriods[selectedCell.pIdx].name;
+
+                teachersDB.forEach(t => {
+                    // A teacher is BUSY if they have a manual workload assignment for this day+period
+                    // (from teacher_workload table, set by admin_teacher_availability.html)
+                    const isBusy = globalWorkloadDB.some(w => {
+                        if (w.teacher_id !== t.id) return false;
+                        const dbDay = (w.day || '').toUpperCase();
+                        const dbDayCode = dbDay.length > 3 ? dbDay.substring(0, 3) : dbDay;
+                        const dbPeriod = (w.period || '').toUpperCase();
+                        return dbDayCode === selDayCode && dbPeriod === selPeriodName.toUpperCase();
+                    });
+
+                    const tNameEsc = escapeHTML(t.name);
+                    const tNameSafe = t.name.replace(/'/g, "\\'");
+                    if (isBusy) {
+                        html += `<div class="chip" style="background:#cbd5e1; cursor:not-allowed; opacity: 0.6;" onclick="showError('Teacher is already assigned a class at this time.')">${tNameEsc} <span class="c-code" style="color:#ef4444;">Busy</span></div>`;
+                    } else {
+                        html += `<div class="chip" style="background:#4a6080;" onclick="assignSubject('${pendingSubject}', '${t.id}')">${tNameEsc} <span class="c-code">Assign Teacher</span></div>`;
+                    }
+                });
+            }
+            grid.innerHTML = html;
+        }
+
+        function selectSubjectForPalette(subId) {
+            pendingSubject = subId;
+            selectedDuration = 1; // Reset when subject changes
+            renderPalette();
+        }
+
+        function setDuration(d) {
+            selectedDuration = d;
+            renderPalette();
+        }
+
+        function assignSubject(subId, tchId) {
+            if (!selectedCell) return;
+
+            // 1. Eraser or Lunch specific case (handle as single cell always)
+            if (!subId || subId === 'Lunch') {
+                gridData[selectedCell.day][selectedCell.pIdx] = subId === 'Lunch' ? { subject_id: 'Lunch', teacher_id: null } : null;
+                closePalette(); renderGrid();
+                return;
+            }
+
+            // 2. Multi-period assignment logic
+            const day = selectedCell.day;
+            const startIdx = selectedCell.pIdx;
+
+            for (let i = 0; i < selectedDuration; i++) {
+                const currentIdx = startIdx + i;
+
+                // Safety: Boundary check (end of day)
+                if (currentIdx >= dynamicPeriods.length) break;
+
+                const p = dynamicPeriods[currentIdx];
+
+                // Safety: Skip Lunch periods (do not overwrite)
+                if (p.isLunch) break;
+
+                // Safety: Skip if already assigned (respect existing data)
+                // Exception: Always fill the first clicked cell even if it had data
+                if (i > 0 && gridData[day][currentIdx] && gridData[day][currentIdx].subject_id) break;
+
+                // Check teacher availability against teacher_workload (manual assignments)
+                if (tchId) {
+                    const dayCode = day.substring(0, 3).toUpperCase();
+                    const pName = p.name;
+
+                    const isBusy = globalWorkloadDB.some(w => {
+                        if (w.teacher_id !== tchId) return false;
+                        const dbDay = (w.day || '').toUpperCase();
+                        const dbDayCode = dbDay.length > 3 ? dbDay.substring(0, 3) : dbDay;
+                        const dbPeriod = (w.period || '').toUpperCase();
+                        return dbDayCode === dayCode && dbPeriod === pName.toUpperCase();
+                    });
+
+                    if (isBusy) {
+                        if (i === 0) {
+                            showToast('Teacher is already assigned a class at this time.', 'error');
+                            return;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                // Apply assignment
+                gridData[day][currentIdx] = { subject_id: subId, teacher_id: tchId };
+            }
+
+            closePalette(); renderGrid();
+        }
+
+        function closePalette() {
+            document.getElementById('backdrop').classList.remove('show');
+            document.getElementById('palette').classList.remove('show');
+            selectedCell = null;
+            pendingSubject = null;
+            selectedDuration = 1; // Reset
+            renderGrid();
+        }
+
+        function openManagePeriods() {
+            if (!dynamicPeriods || dynamicPeriods.length === 0) {
+                showToast('Still loading configuration...', 'info');
+                return;
+            }
+            document.getElementById('periodModalBg').classList.add('show');
+            document.getElementById('periodModal').classList.add('show');
+            renderPeriodRows();
+        }
+
+        function closeManagePeriods() {
+            document.getElementById('periodModalBg').classList.remove('show');
+            document.getElementById('periodModal').classList.remove('show');
+        }
+
+        function renderPeriodRows() {
+            const list = document.getElementById('periodList');
+            list.innerHTML = '';
+            dynamicPeriods.forEach((p, idx) => {
+                const row = document.createElement('div');
+                row.className = 'period-row modal-time-row';
+                const pNameEsc = escapeHTML(p.name);
+                const pStartEsc = escapeHTML(p.start);
+                const pEndEsc = escapeHTML(p.end);
+                row.innerHTML = `
+                    <input type="text" class="period-name" value="${pNameEsc}" placeholder="Name">
+                    <div class="modal-time-group">
+                        <input type="time" class="start-time" value="${pStartEsc}" style="display:none;">
+                        <input type="time" class="end-time" value="${pEndEsc}" style="display:none;">
+                        
+                        <div class="time-display" onclick="openWheelPicker(this, 'start')">${formatTimeForDisplay(p.start)}</div>
+                        <span class="modal-time-arrow">→</span>
+                        <div class="time-display" onclick="openWheelPicker(this, 'end')">${formatTimeForDisplay(p.end)}</div>
+                    </div>
+                    <div class="modal-mobile-actions">
+                        <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--ts);">
+                            <input type="checkbox" class="lunch-checkbox" ${p.isLunch ? 'checked' : ''} style="width:18px; height:18px;"> Lunch
+                        </label>
+                        <button onclick="this.closest('.period-row').remove()" style="background:none; border:none; color:#e53e5a; cursor:pointer; font-size:18px; padding:5px;">❌</button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        function formatTimeForDisplay(val) {
+            if (!val) return "--:-- --";
+            let [h, m] = val.split(':');
+            let hInt = parseInt(h);
+            let ampm = hInt >= 12 ? "PM" : "AM";
+            hInt = hInt % 12 || 12;
+            return `${String(hInt).padStart(2, '0')}:${m} ${ampm}`;
+        }
+
+        /* ── Wheel Picker Logic ────────────────── */
+        let currentTargetDisplay = null;
+        let currentTargetType = '';
+        let pickerState = { hh: '09', mm: '00', ampm: 'AM' };
+
+        function initWheels() {
+            const hh = document.getElementById('wheelHH');
+            const mm = document.getElementById('wheelMM');
+
+            let hhHTML = '<div class="wheel-item" style="height:50px;"></div><div class="wheel-item" style="height:50px;"></div>'; // Padding
+            for (let i = 1; i <= 12; i++) hhHTML += `<div class="wheel-item" data-val="${String(i).padStart(2, '0')}">${String(i).padStart(2, '0')}</div>`;
+            hhHTML += '<div class="wheel-item" style="height:50px;"></div><div class="wheel-item" style="height:50px;"></div>';
+            hh.innerHTML = hhHTML;
+
+            let mmHTML = '<div class="wheel-item" style="height:50px;"></div><div class="wheel-item" style="height:50px;"></div>';
+            for (let i = 0; i < 60; i++) mmHTML += `<div class="wheel-item" data-val="${String(i).padStart(2, '0')}">${String(i).padStart(2, '0')}</div>`;
+            mmHTML += '<div class="wheel-item" style="height:50px;"></div><div class="wheel-item" style="height:50px;"></div>';
+            mm.innerHTML = mmHTML;
+
+            const setupWheel = (w, key) => {
+                w.onscroll = () => {
+                    clearTimeout(w.scrollTimeout);
+                    w.scrollTimeout = setTimeout(() => {
+                        const items = w.querySelectorAll('.wheel-item[data-val]');
+                        let closest = null;
+                        let minDist = Infinity;
+                        items.forEach(item => {
+                            const rect = item.getBoundingClientRect();
+                            const wheelRect = w.getBoundingClientRect();
+                            const dist = Math.abs((rect.top + rect.height / 2) - (wheelRect.top + wheelRect.height / 2));
+                            item.classList.remove('active');
+                            if (dist < minDist) {
+                                minDist = dist;
+                                closest = item;
+                            }
+                        });
+                        if (closest) {
+                            closest.classList.add('active');
+                            pickerState[key] = closest.dataset.val;
+                        }
+                    }, 50);
+                };
+            };
+            setupWheel(hh, 'hh');
+            setupWheel(mm, 'mm');
+        }
+
+        function openWheelPicker(display, type) {
+            currentTargetDisplay = display;
+            currentTargetType = type;
+
+            const row = display.closest('.period-row');
+            const master = row.querySelector(`.${type}-time`);
+            const val = master.value || "09:00";
+
+            let [h, m] = val.split(':');
+            let hInt = parseInt(h);
+            let ampm = hInt >= 12 ? "PM" : "AM";
+            hInt = hInt % 12 || 12;
+
+            pickerState = { hh: String(hInt).padStart(2, '0'), mm: m, ampm: ampm };
+
+            setPickerAMPM(ampm);
+            document.getElementById('wheelPickerOverlay').classList.add('show');
+
+            if (!document.getElementById('wheelHH').innerHTML) initWheels();
+
+            // Scroll wheels to current value
+            setTimeout(() => {
+                scrollWheelTo(document.getElementById('wheelHH'), pickerState.hh);
+                scrollWheelTo(document.getElementById('wheelMM'), pickerState.mm);
+            }, 100);
+        }
+
+        function scrollWheelTo(w, val) {
+            const item = w.querySelector(`.wheel-item[data-val="${val}"]`);
+            if (item) {
+                const top = item.offsetTop - (w.offsetHeight / 2) + (item.offsetHeight / 2);
+                w.scrollTo({ top, behavior: 'smooth' });
+            }
+        }
+
+        function setPickerAMPM(val) {
+            pickerState.ampm = val;
+            document.getElementById('btnAM').classList.toggle('active', val === 'AM');
+            document.getElementById('btnPM').classList.toggle('active', val === 'PM');
+        }
+
+        function closeWheelPicker() {
+            document.getElementById('wheelPickerOverlay').classList.remove('show');
+        }
+
+        function confirmWheelPicker() {
+            let h = parseInt(pickerState.hh);
+            if (pickerState.ampm === "PM" && h < 12) h += 12;
+            if (pickerState.ampm === "AM" && h === 12) h = 0;
+
+            const time24 = `${String(h).padStart(2, '0')}:${pickerState.mm}`;
+            const row = currentTargetDisplay.closest('.period-row');
+            const master = row.querySelector(`.${currentTargetType}-time`);
+
+            master.value = time24;
+            currentTargetDisplay.textContent = formatTimeForDisplay(time24);
+
+            closeWheelPicker();
+        }
+
+        function addPeriodRow() {
+            const list = document.getElementById('periodList');
+            const rows = list.querySelectorAll('.period-row');
+            let start = "";
+            let name = "P" + (rows.length + 1);
+
+            if (rows.length > 0) {
+                const lastRow = rows[rows.length - 1];
+                start = lastRow.querySelector('.end-time').value;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'period-row modal-time-row';
+            const nameEsc = escapeHTML(name);
+            const startEsc = escapeHTML(start);
+            row.innerHTML = `
+                <input type="text" class="period-name" value="${nameEsc}" placeholder="Name">
+                <div class="modal-time-group">
+                    <input type="time" class="start-time" value="${startEsc}" style="display:none;">
+                    <input type="time" class="end-time" value="" style="display:none;">
+
+                    <div class="time-display" onclick="openWheelPicker(this, 'start')">${formatTimeForDisplay(start)}</div>
+                    <span class="modal-time-arrow">→</span>
+                    <div class="time-display" onclick="openWheelPicker(this, 'end')">--:-- --</div>
+                </div>
+                <div class="modal-mobile-actions">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--ts);">
+                        <input type="checkbox" class="lunch-checkbox" style="width:18px; height:18px;"> Lunch
+                    </label>
+                    <button onclick="this.closest('.period-row').remove()" style="background:none; border:none; color:#e53e5a; cursor:pointer; font-size:18px; padding:5px;">❌</button>
+                </div>
+            `;
+            list.appendChild(row);
+        }
+
+        function removePeriodRow(btn) {
+            btn.parentElement.remove();
+        }
+
+        async function savePeriods() {
+            const rows = document.querySelectorAll('#periodList .period-row');
+            const insertPayload = [];
+
+            const y = document.getElementById('selYear').value;
+            const s = document.getElementById('selSem').value;
+            const sec = document.getElementById('selSection').value;
+
+            for (let i = 0; i < rows.length; i++) {
+                const name = rows[i].querySelector('.period-name').value.trim();
+                const start = rows[i].querySelector('.start-time').value;
+                const end = rows[i].querySelector('.end-time').value;
+                const isLunch = rows[i].querySelector('.lunch-checkbox').checked;
+
+                if (!name || !start || !end) {
+                    showToast('All period fields must be filled!', 'error');
+                    return;
+                }
+
+                insertPayload.push({
+                    branch: FIXED_BRANCH,
+                    year: y,
+                    semester: s,
+                    section: sec,
+                    name: name,
+                    start_time: start,
+                    end_time: end,
+                    is_lunch: isLunch,
+                    order_index: i + 1
+                });
+            }
+
+            const btn = document.querySelector('#periodModal .btn-save');
+            const prevText = btn.textContent;
+            btn.textContent = "Saving...";
+            btn.disabled = true;
+
+            try {
+                // Delete periods ONLY for this class
+                const { error: delErr } = await sb.from('periods')
+                    .delete()
+                    .eq('branch', FIXED_BRANCH)
+                    .eq('year', y)
+                    .eq('semester', s)
+                    .eq('section', sec);
+                if (delErr) throw delErr;
+
+                if (insertPayload.length > 0) {
+                    const { error: insErr } = await sb.from('periods').insert(insertPayload);
+                    if (insErr) throw insErr;
+                }
+
+                showToast('✅ Periods saved successfully!', 'success');
+                closeManagePeriods();
+
+                // CRITICAL: Full reload of page data to sync UI with the new database state
+                await loadTimetable();
+
+            } catch (err) {
+                console.error(err);
+                showToast('❌ Save failed: ' + err.message, 'error');
+            } finally {
+                btn.textContent = prevText;
+                btn.disabled = false;
+            }
+        }
+
+        async function saveTimetable() {
+            const btn = document.getElementById('btnSave');
+            const y = document.getElementById('selYear').value;
+            const s = document.getElementById('selSem').value;
+            const sec = document.getElementById('selSection').value;
+
+            btn.disabled = true; btn.textContent = "Checking Conflicts...";
+
+            try {
+                // 1. Compile proposed slots
+                let proposed = [];
+                const renderDays = includeSaturday ? DAYS : DAYS.slice(0, 5);
+
+                renderDays.forEach(day => {
+                    const fullDay = day.substring(0, 3).toUpperCase();
+                    dynamicPeriods.forEach((p, pIdx) => {
+                        let val = gridData[day][pIdx];
+                        if (p.isLunch || (val && val.subject_id === 'Lunch')) {
+                            proposed.push({
+                                branch: FIXED_BRANCH, year: y, semester: s, section: sec,
+                                day: fullDay, period: p.name, start_time: p.start, end_time: p.end,
+                                subject_id: null, teacher_id: null, is_lunch: true
+                            });
+                        } else if (val && val.subject_id) {
+                            proposed.push({
+                                branch: FIXED_BRANCH, year: y, semester: s, section: sec,
+                                day: fullDay, period: p.name, start_time: p.start, end_time: p.end,
+                                subject_id: val.subject_id, teacher_id: val.teacher_id || null, is_lunch: false
+                            });
+                        }
+                    });
+                });
+
+                btn.textContent = "Saving...";
+
+                // 5. Insert or Update Timetable slots
+                if (proposed.length > 0) {
+                    // Check for teacher double-booking conflicts
+                    const teacherIds = [...new Set(proposed.map(p => p.teacher_id).filter(id => id))];
+                    if (teacherIds.length > 0) {
+                        const { data: otherWorkload } = await sb.from('teacher_workload')
+                            .select('teacher_id, day, period, section, year, semester, branch, subject')
+                            .in('teacher_id', teacherIds);
+
+                        // FILTER OUT SELF-CONFLICTS: Only detect conflicts if the branch/year/sem/section is DIFFERENT
+                        const realConflicts = (otherWorkload || []).filter(w =>
+                            String(w.branch) !== String(FIXED_BRANCH) ||
+                            String(w.year) !== String(y) ||
+                            String(w.semester) !== String(s) ||
+                            String(w.section) !== String(sec)
+                        );
+
+                        for (const row of proposed) {
+                            if (!row.teacher_id || row.is_lunch) continue;
+                            const conflict = realConflicts.find(c =>
+                                c.teacher_id === row.teacher_id &&
+                                String(c.day).toUpperCase() === String(row.day).toUpperCase() &&
+                                String(c.period).toUpperCase() === String(row.period).toUpperCase()
+                            );
+                            if (conflict) {
+                                throw new Error(`Double Booking: This teacher already has a class (${conflict.subject || 'Unknown'}) at ${row.day} ${row.period} for Section ${conflict.section} (${conflict.year} Year).`);
+                            }
+                        }
+                    }
+
+                    // Target Deletion before Upsert to handle removed cells
+                    await sb.from('timetable').delete()
+                        .eq('branch', FIXED_BRANCH).eq('year', y).eq('semester', s).eq('section', sec);
+                    await sb.from('teacher_workload').delete()
+                        .eq('branch', FIXED_BRANCH).eq('year', y).eq('semester', s).eq('section', sec)
+                        .eq('is_manual', false);
+
+                    // Use upsert to avoid duplicate records based on the unique constraint
+                    const { error: ttErr } = await sb.from('timetable').upsert(proposed, {
+                        onConflict: 'branch,year,semester,section,day,period'
+                    });
+                    if (ttErr) throw ttErr;
+
+                    // Build and insert/update teacher_workload auto-sync payload
+                    const twPayload = [];
+                    proposed.forEach(row => {
+                        if (row.teacher_id && !row.is_lunch) {
+                            const subObj = subjectsDB.find(s => s.id === row.subject_id);
+                            twPayload.push({
+                                teacher_id: row.teacher_id,
+                                subject_id: row.subject_id,
+                                subject: subObj ? subObj.name : 'Unknown',
+                                branch: FIXED_BRANCH,
+                                year: y,
+                                semester: s,
+                                section: sec,
+                                day: row.day,
+                                period: row.period,
+                                is_manual: false
+                            });
+                        }
+                    });
+
+                    if (twPayload.length > 0) {
+                        const { error: twErr } = await sb.from('teacher_workload').upsert(twPayload, {
+                            onConflict: 'branch,year,semester,section,day,period'
+                        });
+                        if (twErr) throw twErr;
+                    }
+
+                    // 6. Save Timetable config (settings like include_saturday)
+                    await sb.from('timetable_config').upsert({
+                        branch: FIXED_BRANCH,
+                        year: y,
+                        semester: s,
+                        section: sec,
+                        include_saturday: includeSaturday
+                    }, { onConflict: 'branch,year,semester,section' });
+                }
+
+                showToast('✅ Timetable saved successfully!', 'success');
+                loadTimetable(); // reload global workload to reflect new state
+            } catch (err) {
+                showToast('❌ Save failed: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = "Save Changes";
+            }
+        }
+        /* ── showToast ─────────────────────── */
+        function showToast(msg, type = 'success', duration = 3000) {
+            const t = document.getElementById('tt-toast');
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+            t.className = `show ${type}`;
+            const msgEsc = escapeHTML(msg);
+            t.innerHTML = `<span class="tt-icon">${icon}</span><span class="tt-msg">${msgEsc}</span>`;
+            clearTimeout(t._timer);
+            t._timer = setTimeout(() => { t.classList.remove('show'); }, duration);
+        }
+    </script>
+
+    <!-- Toast UI -->
+    <div id="tt-toast"></div>
+
+</body>
+
+</html>

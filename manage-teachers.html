@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Manage Teachers — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script src="actions.js" defer></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --green: #12b76a;
+            --green-soft: rgba(18, 183, 106, 0.09);
+            --red: #e53e5a;
+            --red-soft: rgba(229, 62, 90, 0.09);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+        }
+
+        /* Subtle blob */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -80px;
+            right: -60px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.18) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
+            padding-bottom: 48px;
+            animation: pageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(14px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 52px 20px 24px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.15s;
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--tp);
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        .header-info {
+            flex: 1;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.3px;
+        }
+
+        .header-sub {
+            font-size: 12.5px;
+            color: var(--ts);
+            margin-top: 2px;
+        }
+
+        .count-badge {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        /* Add Form card */
+        .form-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 24px 22px;
+            margin: 0 18px 24px;
+            box-shadow: 0 4px 24px rgba(26, 79, 219, 0.09);
+            border: 1px solid var(--border);
+        }
+
+        .form-card-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-card-title svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--blue);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--ts);
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8;
+            pointer-events: none;
+        }
+
+        .field input {
+            width: 100%;
+            padding: 13px 14px 13px 42px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--tp);
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .field input::placeholder {
+            color: #b8cce0;
+        }
+
+        .field input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3.5px rgba(26, 79, 219, 0.1);
+            background: #fff;
+        }
+
+        .field input.error {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(229, 62, 90, 0.1);
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--tm);
+            margin-top: 5px;
+            padding-left: 2px;
+        }
+
+        .field-hint.err {
+            color: var(--red);
+        }
+
+        .btn-add {
+            width: 100%;
+            padding: 15px 0;
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, #1a4fdb, #2a62f0);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 22px rgba(26, 79, 219, 0.32);
+            transition: transform 0.18s, box-shadow 0.18s;
+            margin-top: 4px;
+        }
+
+        .btn-add svg {
+            width: 17px;
+            height: 17px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(26, 79, 219, 0.42);
+        }
+
+        .btn-add:active {
+            transform: scale(0.97);
+        }
+
+        .btn-add:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Teacher list */
+        .list-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px 12px;
+        }
+
+        .list-head h2 {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--tp);
+        }
+
+        .list-head span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--tm);
+        }
+
+        .teacher-list {
+            padding: 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .teacher-row {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 16px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 2px 12px rgba(26, 79, 219, 0.06);
+            border: 1px solid var(--border);
+            animation: rowIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes rowIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .t-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--blue);
+        }
+
+        .t-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .t-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--tp);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .t-email {
+            font-size: 11.5px;
+            color: var(--ts);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .t-date {
+            font-size: 10px;
+            color: var(--tm);
+            margin-top: 3px;
+        }
+
+        .t-badge {
+            flex-shrink: 0;
+            background: var(--green-soft);
+            border: 1px solid rgba(18, 183, 106, 0.2);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        .delete-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            background: var(--red-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, background 0.15s;
+            flex-shrink: 0;
+        }
+
+        .delete-btn:hover {
+            background: rgba(229, 62, 90, 0.18);
+        }
+
+        .delete-btn:active {
+            transform: scale(0.88);
+        }
+
+        .delete-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--red);
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 30px;
+            color: var(--tm);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            stroke: #cbd9f0;
+            fill: none;
+            stroke-width: 1.4;
+            margin-bottom: 14px;
+        }
+
+        .empty-state p {
+            font-size: 13.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--ts);
+        }
+
+        .empty-state small {
+            font-size: 12px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            padding: 9px 20px;
+            z-index: 99;
+            font-size: 12.5px;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            white-space: nowrap;
+        }
+
+        .toast.green {
+            background: rgba(18, 183, 106, 0.15);
+            border: 1px solid rgba(18, 183, 106, 0.4);
+            color: var(--green);
+        }
+
+        .toast.red {
+            background: rgba(229, 62, 90, 0.12);
+            border: 1px solid rgba(229, 62, 90, 0.35);
+            color: var(--red);
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* Skeleton */
+        .skel {
+            background: linear-gradient(90deg, #e4ecff 25%, #f1f5ff 50%, #e4ecff 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 18px;
+            height: 76px;
+            margin-bottom: 10px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="back-btn" onclick="history.back()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+            </div>
+            <div class="header-info">
+                <div class="header-title">Manage Teachers</div>
+                <div class="header-sub">Authorize teacher logins</div>
+            </div>
+            <div class="count-badge" id="countBadge">— teachers</div>
+        </div>
+
+        <!-- Add teacher form -->
+        <div class="form-card">
+            <div class="form-card-title">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M20 21v-2a8 8 0 0 0-16 0v2" />
+                    <path d="M16 11l2 2 4-4" />
+                </svg>
+                Add New Teacher
+            </div>
+
+            <div class="field">
+                <label>Teacher Name</label>
+                <div class="input-wrap">
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 20v-1a8 8 0 0 1 16 0v1" />
+                    </svg>
+                    <input type="text" id="teacherName" placeholder="e.g. Dr. Ravi Kumar" autocomplete="off" />
+                </div>
+                <div class="field-hint" id="nameHint"></div>
+            </div>
+
+            <div class="field">
+                <label>Email ID</label>
+                <div class="input-wrap">
+                    <svg viewBox="0 0 24 24">
+                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                        <path d="M22 7l-10 7L2 7" />
+                    </svg>
+                    <input type="email" id="teacherEmail" placeholder="teacher@svpcet.ac.in" autocomplete="off"
+                        oninput="clearErr()" />
+                </div>
+                <div class="field-hint" id="emailHint">This email will be authorized for teacher login via Google</div>
+            </div>
+
+            <button class="btn-add" id="addBtn" onclick="addTeacher()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add Teacher
+            </button>
+        </div>
+
+        <!-- Teacher list -->
+        <div class="list-head">
+            <h2>Authorized Teachers</h2>
+            <span id="listCount">Loading…</span>
+        </div>
+        <div class="teacher-list" id="teacherList">
+            <div class="skel"></div>
+            <div class="skel"></div>
+        </div>
+
+    </div>
+
+    </div>
+
+
+    <script>
+        let teachers = [];
+        let currentUser = null;
+        const avatarColors = ['#1a4fdb', '#12b76a', '#f59e0b', '#8b5cf6', '#e53e5a', '#0ea5e9'];
+
+        window.addEventListener('load', async () => {
+            const { session, user, role } = await protectRoute(['admin']);
+            if (!session) return;
+            currentUser = session.user;
+            await loadTeachers();
+        });
+
+        async function loadTeachers() {
+            const { data, error } = await sb.from('authorized_teachers')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (error) { console.error(error); return; }
+            teachers = data || [];
+            renderList();
+        }
+
+        function getInitials(name) {
+            return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+        }
+
+        function formatDate(iso) {
+            return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function renderList() {
+            const total = teachers.length;
+            document.getElementById('countBadge').textContent = `${total} teacher${total !== 1 ? 's' : ''}`;
+            document.getElementById('listCount').textContent = `${total} total`;
+
+            const container = document.getElementById('teacherList');
+            if (!total) {
+                container.innerHTML = `
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/></svg>
+            <p>No teachers added yet</p>
+            <small>Add a teacher above to get started</small>
+          </div>`;
+                return;
+            }
+
+            // Using data-id for event delegation
+            container.innerHTML = teachers.map((t, i) => {
+                const color = avatarColors[i % avatarColors.length];
+                const init = escapeHTML(getInitials(t.name));
+                return `
+        <div class="teacher-row" id="row-${t.id}" style="animation-delay:${i * 0.04}s">
+          <div class="t-avatar" style="background:${color}18;color:${color};border-color:${color}28">${init}</div>
+          <div class="t-info">
+            <div class="t-name">${escapeHTML(t.name)}</div>
+            <div class="t-email">${escapeHTML(t.email)}</div>
+            <div class="t-date">Added ${escapeHTML(formatDate(t.created_at))}</div>
+          </div>
+          <div class="t-badge">Authorized</div>
+          <button class="delete-btn" 
+                  data-action="delete" 
+                  data-id="${t.id}" 
+                  data-table="authorized_teachers" 
+                  data-row="#row-${t.id}"
+                  title="Remove">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>`;
+            }).join('');
+        }
+
+        // Page-specific action success handler
+        document.addEventListener('actionSuccess', (e) => {
+            const { action, id } = e.detail;
+            if (action === 'delete') {
+                loadTeachers().then(() => {
+                    window.dispatchEvent(new Event('teachersUpdated'));
+                });
+            }
+        });
+
+        // Listen for global teacher updates
+        window.addEventListener('teachersUpdated', () => {
+            loadTeachers();
+        });
+
+        // Set up realtime sync for authorized_teachers
+        sb.channel('teachers-channel-manage')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'authorized_teachers' }, () => {
+                loadTeachers();
+            })
+            .subscribe();
+
+        async function addTeacher() {
+            const nameEl = document.getElementById('teacherName');
+            const emailEl = document.getElementById('teacherEmail');
+            const name = nameEl.value.trim();
+            const email = emailEl.value.trim().toLowerCase();
+
+            // Validation
+            let valid = true;
+            if (!name) {
+                nameEl.classList.add('error');
+                document.getElementById('nameHint').textContent = 'Name is required';
+                document.getElementById('nameHint').className = 'field-hint err';
+                valid = false;
+            }
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                emailEl.classList.add('error');
+                document.getElementById('emailHint').textContent = 'Enter a valid email address';
+                document.getElementById('emailHint').className = 'field-hint err';
+                valid = false;
+            }
+            if (!valid) return;
+
+            const btn = document.getElementById('addBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" style="animation:spin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg> Adding…`;
+
+            const { error } = await sb.from('authorized_teachers').insert({
+                name, email
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add Teacher`;
+
+            if (error) {
+                if (error.code === '23505') {
+                    emailEl.classList.add('error');
+                    document.getElementById('emailHint').textContent = 'This email is already authorized';
+                    document.getElementById('emailHint').className = 'field-hint err';
+                } else {
+                    showError('Error: ' + error.message);
+                }
+                return;
+            }
+
+            // Clear form
+            nameEl.value = '';
+            emailEl.value = '';
+            nameEl.classList.remove('error');
+            emailEl.classList.remove('error');
+            document.getElementById('nameHint').textContent = '';
+            document.getElementById('emailHint').textContent = 'This email will be authorized for teacher login via Google';
+            document.getElementById('emailHint').className = 'field-hint';
+
+            showSuccess(`✓ ${name} added as authorized teacher`);
+            await loadTeachers();
+            window.dispatchEvent(new Event('teachersUpdated'));
+        }
+
+        function clearErr() {
+            const el = document.getElementById('teacherEmail');
+            el.classList.remove('error');
+            document.getElementById('emailHint').textContent = 'This email will be authorized for teacher login via Google';
+            document.getElementById('emailHint').className = 'field-hint';
+        }
+
+        // Input enter key → submit
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') addTeacher();
+        });
+    </script>
+</body>
+
+</html>

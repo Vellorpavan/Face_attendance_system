@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Attendance Calendar — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            /* Core Theme UI */
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-hover: #1540b0;
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f5f8ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.08);
+
+            /* Heatmap Colors */
+            --hm-empty: #ebedf0;
+            /* No records */
+            --hm-bad: #e53e5a;
+            /* 0% Present (Red) */
+            --hm-warn: #f59e0b;
+            /* 1-99% Present (Yellow/Orange mix) */
+            --hm-good: #12b76a;
+            /* 100% Present (Green) */
+            --hm-border: rgba(27, 31, 35, 0.06);
+
+            --green: #12b76a;
+            --red: #e53e5a;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: rgba(245, 248, 255, 0.95);
+            backdrop-filter: blur(12px);
+            padding: 48px 20px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+            cursor: pointer;
+        }
+
+        .back-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--tp);
+            stroke-width: 2.5;
+            fill: none;
+        }
+
+        .page-title {
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--tp);
+        }
+
+        /* ── Month Controls ── */
+        .month-ctrl {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 20px 16px;
+            background: var(--card);
+            padding: 6px 6px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.03);
+        }
+
+        .mc-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ts);
+            transition: all 0.2s;
+        }
+
+        .mc-btn:active {
+            background: var(--bg);
+        }
+
+        .mc-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            stroke-width: 2.5;
+            fill: none;
+        }
+
+        .mc-label {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--tp);
+            user-select: none;
+        }
+
+        /* ── Heatmap Calendar ── */
+        .heatmap-card {
+            background: var(--card);
+            margin: 0 20px;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 16px rgba(26, 79, 219, 0.04);
+            position: relative;
+        }
+
+        /* Loading overlay */
+        .loader {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(4px);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.2s;
+        }
+
+        .loading .loader {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loader-spin {
+            width: 28px;
+            height: 28px;
+            border: 3px solid var(--blue-soft);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .w-day {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--tm);
+            user-select: none;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            /* Classic GitHub spacing */
+        }
+
+        .day-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            background: var(--hm-empty);
+            border: 1px solid var(--hm-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.15s, filter 0.15s;
+        }
+
+        /* Color Mapping Classes */
+        .day-cell.c-good {
+            background: var(--hm-good);
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .day-cell.c-warn {
+            background: var(--hm-warn);
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .day-cell.c-bad {
+            background: var(--hm-bad);
+            color: rgba(255, 255, 255, 0.9);
+            border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .day-cell.empty-pad {
+            background: transparent;
+            border: none;
+            cursor: default;
+        }
+
+        .day-cell:active:not(.empty-pad) {
+            transform: scale(0.85);
+        }
+
+        /* Highlight Today */
+        .day-cell.is-today::after {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border: 2px solid var(--tp);
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        /* Legend */
+        .legend {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ts);
+            justify-content: flex-end;
+        }
+
+        .lg-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            border: 1px solid var(--hm-border);
+        }
+
+        .lg-good {
+            background: var(--hm-good);
+        }
+
+        .lg-warn {
+            background: var(--hm-warn);
+        }
+
+        .lg-bad {
+            background: var(--hm-bad);
+        }
+
+        /* ── Bottom Sheet (Details) ── */
+        .sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .sheet-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg);
+            border-radius: 28px 28px 0 0;
+            z-index: 110;
+            padding: 24px 24px 40px;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sheet.active {
+            transform: translateY(0);
+        }
+
+        .sheet-drag {
+            width: 40px;
+            height: 5px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            margin: 0 auto 20px;
+        }
+
+        .sheet-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 2px;
+        }
+
+        .sheet-sub {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ts);
+            margin-bottom: 20px;
+        }
+
+        .sheet-scroll {
+            overflow-y: auto;
+            flex: 1;
+            padding-bottom: 10px;
+        }
+
+        .subj-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 6px rgba(26, 79, 219, 0.03);
+        }
+
+        .subj-name {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: var(--tp);
+        }
+
+        .subj-code {
+            font-size: 11.5px;
+            color: var(--ts);
+            margin-top: 2px;
+            font-weight: 600;
+        }
+
+        .s-badge {
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .s-badge.present {
+            background: rgba(18, 183, 106, 0.1);
+            color: var(--green);
+            border: 1px solid rgba(18, 183, 106, 0.2);
+        }
+
+        .s-badge.absent {
+            background: rgba(229, 62, 90, 0.08);
+            color: var(--red);
+            border: 1px solid rgba(229, 62, 90, 0.18);
+        }
+
+        .empty-sheet {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--tm);
+        }
+
+        .empty-sheet svg {
+            width: 40px;
+            height: 40px;
+            stroke: var(--tm);
+            fill: none;
+            opacity: 0.5;
+            margin-bottom: 10px;
+        }
+
+        .empty-sheet h3 {
+            font-size: 15px;
+            color: var(--tp);
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="back-btn" onclick="history.back()">
+            <svg viewBox="0 0 24 24">
+                <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+        </div>
+        <div class="page-title">Attendance Heatmap</div>
+    </div>
+
+    <!-- Month Controls -->
+    <div class="month-ctrl">
+        <button class="mc-btn" onclick="changeMonth(-1)"><svg viewBox="0 0 24 24">
+                <path d="M15 18l-6-6 6-6" />
+            </svg></button>
+        <div class="mc-label" id="monthLabel">September 2026</div>
+        <button class="mc-btn" onclick="changeMonth(1)"><svg viewBox="0 0 24 24">
+                <path d="M9 18l6-6-6-6" />
+            </svg></button>
+    </div>
+
+    <!-- Calendar Grid -->
+    <div class="heatmap-card" id="heatmapCard">
+        <div class="loader">
+            <div class="loader-spin"></div>
+        </div>
+
+        <div class="weekdays">
+            <div class="w-day">Su</div>
+            <div class="w-day">Mo</div>
+            <div class="w-day">Tu</div>
+            <div class="w-day">We</div>
+            <div class="w-day">Th</div>
+            <div class="w-day">Fr</div>
+            <div class="w-day">Sa</div>
+        </div>
+
+        <div class="days-grid" id="daysGrid">
+            <!-- JS generates cells here -->
+        </div>
+
+        <div class="legend">
+            Less <div class="lg-box" style="background:var(--hm-empty)"></div>
+            <div class="lg-box lg-bad"></div>
+            <div class="lg-box lg-warn"></div>
+            <div class="lg-box lg-good"></div> More
+        </div>
+    </div>
+
+    <!-- Bottom Sheet -->
+    <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+    <div class="sheet" id="detailSheet">
+        <div class="sheet-drag" onclick="closeSheet()"></div>
+        <div class="sheet-title" id="sheetTitle">21 Feb 2026</div>
+        <div class="sheet-sub" id="sheetSub">0% Present (0/0)</div>
+        <div class="sheet-scroll" id="sheetContent">
+            <!-- Subject cards inject here -->
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentYear, currentMonth;
+        let currentUser = null;
+        let userSubjects = [];
+        let monthRecords = [];
+        let daysMap = {}; // Maps YYYY-MM-DD to array of attendance records
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        window.addEventListener('load', async () => {
+            const now = new Date();
+            currentYear = now.getFullYear();
+            currentMonth = now.getMonth();
+
+            const { session, role } = await protectRoute(['student', 'admin']);
+            if (!session) return;
+
+            // Get Student & Subjects (Cache subjects for fast sheet rendering)
+            const { data: student } = await sb.from('students').select('*').eq('uid', session.user.id).maybeSingle();
+            if (!student) return;
+
+            currentUser = student;
+
+            const { data: subjects } = await sb.from('subjects')
+                .select('id, name, code')
+                .eq('year', student.year).eq('semester', student.semester).eq('branch', student.branch);
+            userSubjects = subjects || [];
+
+            loadMonthData();
+        });
+
+        async function changeMonth(delta) {
+            currentMonth += delta;
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            loadMonthData();
+        }
+
+        async function loadMonthData() {
+            document.getElementById('monthLabel').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+            document.getElementById('heatmapCard').classList.add('loading');
+
+            // Format boundaries for Supabase strictly YYYY-MM-DD
+            // Using local time to prevent UTC shift issues
+            const firstDay = new Date(currentYear, currentMonth, 1);
+            const lastDay = new Date(currentYear, currentMonth + 1, 0);
+
+            // Shift timezone so YYYY-MM-DD is exact local
+            const startStr = new Date(firstDay.getTime() - firstDay.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+            const endStr = new Date(lastDay.getTime() - lastDay.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+            // Fetch records
+            let query = sb.from('attendance')
+                .select('subject_id, status, date, period_count')
+                .eq('student_id', currentUser.id)
+                .gte('date', startStr)
+                .lte('date', endStr);
+
+            if (userSubjects.length > 0) {
+                query = query.in('subject_id', userSubjects.map(s => s.id));
+            }
+
+            const { data } = await query;
+            monthRecords = data || [];
+
+            // Build map: 'YYYY-MM-DD' => [{subject_id, status}]
+            daysMap = {};
+            monthRecords.forEach(r => {
+                if (!daysMap[r.date]) daysMap[r.date] = [];
+                daysMap[r.date].push(r);
+            });
+
+            renderGrid();
+            document.getElementById('heatmapCard').classList.remove('loading');
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('daysGrid');
+            grid.innerHTML = '';
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay(); // 0(Sun) - 6(Sat)
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            // Local today for highlighting exactly the current day box
+            const todayDate = new Date();
+            const todayStr = new Date(todayDate.getTime() - todayDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+            // Empty pads before 1st day
+            for (let i = 0; i < firstDay; i++) {
+                const el = document.createElement('div');
+                el.className = 'day-cell empty-pad';
+                grid.appendChild(el);
+            }
+
+            // Fill actual days
+            for (let day = 1; day <= daysInMonth; day++) {
+                // Ensure proper 0-padding for ISO date
+                const localD = new Date(currentYear, currentMonth, day);
+                const isoStr = new Date(localD.getTime() - localD.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+                const records = daysMap[isoStr] || [];
+
+                let htmlClass = 'day-cell';
+                if (isoStr === todayStr) htmlClass += ' is-today';
+
+                // Calculate Color
+                if (records.length > 0) {
+                    const present = records.filter(r => r.status === 'present')
+                        .reduce((sum, r) => sum + (r.period_count || 1), 0);
+                    const total = records.reduce((sum, r) => sum + (r.period_count || 1), 0);
+                    const pct = present / total;
+
+                    if (pct === 1) htmlClass += ' c-good';
+                    else if (pct === 0) htmlClass += ' c-bad';
+                    else htmlClass += ' c-warn'; // Partial
+                }
+
+                const el = document.createElement('div');
+                el.className = htmlClass;
+                el.textContent = day;
+
+                // Add click listener
+                el.onclick = () => openSheet(isoStr, records);
+
+                grid.appendChild(el);
+            }
+        }
+
+        function openSheet(isoStr, records) {
+            // Setup titles
+            const d = new Date(isoStr);
+            // Format to exactly visual local representation
+            const titleDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+            document.getElementById('sheetTitle').textContent = titleDate;
+
+            const cont = document.getElementById('sheetContent');
+
+            if (records.length === 0) {
+                document.getElementById('sheetSub').textContent = 'No records for this day';
+                cont.innerHTML = `
+                    <div class="empty-sheet">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <h3>No Data</h3>
+                        <p style="font-size:12px; opacity:0.7">Attendance hasn't been posted yet.</p>
+                    </div>`;
+            } else {
+                const presentCount = records.filter(r => r.status === 'present')
+                    .reduce((sum, r) => sum + (r.period_count || 1), 0);
+                const totalCount = records.reduce((sum, r) => sum + (r.period_count || 1), 0);
+                const pct = Math.round((presentCount / totalCount) * 100);
+
+                document.getElementById('sheetSub').textContent = `${pct}% Overall (${presentCount}/${totalCount} Present)`;
+
+                cont.innerHTML = records.map(r => {
+                    const subj = userSubjects.find(s => s.id === r.subject_id) || { name: 'Unknown', code: '' };
+                    const isP = r.status === 'present';
+                    const pLabel = (r.period_count > 1) ? ` (${r.period_count} periods)` : '';
+                    return `
+                        <div class="subj-card">
+                            <div>
+                                <div class="subj-name">${escapeHTML(subj.name)}${escapeHTML(pLabel)}</div>
+                                <div class="subj-code">${escapeHTML(subj.code)}</div>
+                            </div>
+                            <div class="s-badge ${r.status}">${isP ? '✓ Present' : '✗ Absent'}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('sheetOverlay').classList.add('active');
+            document.getElementById('detailSheet').classList.add('active');
+
+            // Map body scroll away
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSheet() {
+            document.getElementById('sheetOverlay').classList.remove('active');
+            document.getElementById('detailSheet').classList.remove('active');
+            setTimeout(() => { document.body.style.overflow = ''; }, 300);
+        }
+    </script>
+</body>
+
+</html>

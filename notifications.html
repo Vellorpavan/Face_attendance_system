@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Notifications - SVPP</title>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --primary: #4f46e5;
+            --primary-light: #e0e7ff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --error: #ef4444;
+            --success: #10b981;
+            --unread-bg: #f0fdf4;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --safe-top: env(safe-area-inset-top, 20px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: var(--surface);
+            padding: calc(var(--safe-top) + 16px) 20px 16px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            margin-left: -8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            color: var(--text-main);
+        }
+
+        .back-btn:active {
+            background-color: var(--bg);
+        }
+
+        .back-btn svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-left: 12px;
+            flex: 1;
+        }
+
+        .action-text {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 14px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px 0;
+        }
+
+        .action-text:active {
+            opacity: 0.7;
+        }
+
+        .container {
+            flex: 1;
+            padding: 16px;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .notification-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--card-shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, opacity 0.3s;
+        }
+
+        .notification-card:active {
+            transform: scale(0.98);
+        }
+
+        .notification-card.unread {
+            background: var(--unread-bg);
+            border-color: #bbf7d0;
+        }
+
+        /* Unread Indicator Dot */
+        .notification-card.unread::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 12px;
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary);
+            border-radius: 50%;
+        }
+
+        .icon-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: var(--bg);
+            flex-shrink: 0;
+            margin-left: 8px;
+            /* Room for dot */
+        }
+
+        .type-attendance {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .type-alert {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .type-admin {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .type-holiday {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .title {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .time {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+
+        .message {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            color: var(--text-muted);
+            opacity: 0.5;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="header">
+        <button class="back-btn" onclick="goBackToDashboard()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <h1 class="header-title">Notifications</h1>
+        <button class="action-text" id="markAllReadBtn" onclick="markAllAsRead()" style="display: none;">Mark all
+            read</button>
+    </header>
+
+    <div class="container" id="notificationsList">
+        <!-- JS rendered content -->
+    </div>
+
+    <!-- Load Supabase Config First -->
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script>
+        let currentUser = null;
+        let currentRole = null;
+        let notifications = [];
+
+        window.onload = async () => {
+            const { session, user, role } = await protectRoute();
+            if (!session) return;
+
+            currentUser = user;
+            currentRole = role;
+
+            if (role === 'student') {
+                const { data: student } = await sb.from('students').select('profile_completed').eq('uid', user.id).maybeSingle();
+            }
+
+            await loadNotifications();
+
+            // Set up Realtime specific to this page to refresh the list automatically
+            sb.channel('realtime-notifs-page')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'notifications' },
+                    (payload) => {
+                        // Very basic reload strategy on inserts from other devices/roles
+                        console.log("Realtime event handled in list:", payload);
+                        loadNotifications();
+                    }
+                )
+                .subscribe();
+        };
+
+        async function loadNotifications() {
+            document.getElementById('loading').style.display = 'flex';
+
+            try {
+                // Fetch notifications applicable to user
+                // Conditions: target_user_id = user.id OR target_role = role OR target_role = 'all'
+                const { data, error } = await sb
+                    .from('notifications')
+                    .select('*')
+                    .or(`target_user_id.eq.${currentUser.id},target_role.eq.${currentRole},target_role.eq.all`)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                notifications = data || [];
+                renderNotifications();
+
+                // Update global badge
+                if (typeof updateGlobalUnreadBadge === 'function') {
+                    updateGlobalUnreadBadge();
+                }
+
+            } catch (err) {
+                console.error("Error loading notifications:", err);
+                document.getElementById('notificationsList').innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 40px; margin-bottom: 12px;">⚠️</div>
+                        <h3>Failed to load</h3>
+                        <p>${escapeHTML(err.message)}</p>
+                    </div>
+                `;
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function getIconData(type) {
+            switch (type) {
+                case 'attendance': return { icon: '📝', class: 'type-attendance' };
+                case 'alert': return { icon: '⚠️', class: 'type-alert' };
+                case 'admin': return { icon: '📢', class: 'type-admin' };
+                case 'holiday': return { icon: '🌴', class: 'type-holiday' };
+                default: return { icon: '🔔', class: 'type-attendance' };
+            }
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHrs = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHrs / 24);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHrs < 24) return `${diffHrs}h ago`;
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays}d ago`;
+
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function renderNotifications() {
+            const listEl = document.getElementById('notificationsList');
+            const markAllBtn = document.getElementById('markAllReadBtn');
+
+            if (notifications.length === 0) {
+                listEl.innerHTML = `
+                    <div class="empty-state">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                        </svg>
+                        <h3>No updates yet</h3>
+                        <p>You're all caught up!</p>
+                    </div>
+                `;
+                markAllBtn.style.display = 'none';
+                return;
+            }
+
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            markAllBtn.style.display = unreadCount > 0 ? 'block' : 'none';
+
+            let html = '';
+            notifications.forEach(n => {
+                const iconData = getIconData(n.type);
+                const unreadClass = n.is_read ? '' : 'unread';
+
+                html += `
+                    <div class="notification-card ${unreadClass}" onclick="markAsRead('${n.id}', this)">
+                        <div class="icon-circle ${iconData.class}">
+                            ${iconData.icon}
+                        </div>
+                        <div class="content">
+                            <div class="title">
+                                <span>${escapeHTML(n.title)}</span>
+                                <span class="time">${formatTime(n.created_at)}</span>
+                            </div>
+                            <div class="message">${escapeHTML(n.message)}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+        }
+
+        async function markAsRead(id, cardEl) {
+            // Optimistic UI update
+            if (!cardEl.classList.contains('unread')) return;
+
+            cardEl.classList.remove('unread');
+            const nIndex = notifications.findIndex(n => n.id === id);
+            if (nIndex > -1) notifications[nIndex].is_read = true;
+
+            // Re-eval basic button visibility locally
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            document.getElementById('markAllReadBtn').style.display = unreadCount > 0 ? 'block' : 'none';
+
+            if (typeof updateGlobalUnreadBadge === 'function') {
+                updateGlobalUnreadBadge();
+            }
+
+            try {
+                await sb.from('notifications').update({ is_read: true }).eq('id', id);
+            } catch (e) {
+                console.error("Failed to mark as read:", e);
+                // Optionally revert UI on failure
+                cardEl.classList.add('unread');
+                if (nIndex > -1) notifications[nIndex].is_read = false;
+            }
+        }
+
+        async function markAllAsRead() {
+            const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
+            if (unreadIds.length === 0) return;
+
+            document.getElementById('markAllReadBtn').style.opacity = '0.5';
+
+            try {
+                // Optimistic UI update
+                notifications.forEach(n => n.is_read = true);
+                renderNotifications();
+
+                if (typeof updateGlobalUnreadBadge === 'function') {
+                    updateGlobalUnreadBadge();
+                }
+
+                // Chunking might be needed if hundreds of unread notifications exist,
+                // but for simple cases this is fine. Array size limitation is typically high enough.
+                const { error } = await sb.from('notifications')
+                    .update({ is_read: true })
+                    .in('id', unreadIds);
+
+                if (error) throw error;
+            } catch (e) {
+                console.error("Bulk mark read failed:", e);
+                showError('Failed to mark all as read.');
+                // Hard reload to revert state cleanly
+                loadNotifications();
+            } finally {
+                document.getElementById('markAllReadBtn').style.opacity = '1';
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>

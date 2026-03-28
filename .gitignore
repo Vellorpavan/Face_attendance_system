@@ -1,0 +1,38 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Environment variables — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Browser config (generated from .env by setup.js)
+config.js
+
+# Project specific
+ngrok.log
+ngrok.pid
+server.log
+start_ngrok.log
+start_ngrok.pid
+cert.pem
+key.pem
+*.backup
+tmp/
+models/
+
+# Build output
+build/
+dist/
+.expo/
+
+# MCP config (may contain project references)
+mcp-servers.json

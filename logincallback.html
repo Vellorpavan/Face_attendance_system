@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating...</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <style>
+        body {
+            background: #0f172a;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loader"></div>
+    <p>Securing your session...</p>
+
+    <script>
+        let isRedirecting = false;
+        function redirect(url) {
+            if (isRedirecting) return;
+            isRedirecting = true;
+            window.location.replace(url);
+        }
+
+        window.addEventListener('load', async () => {
+            const { data: { session }, error } = await sb.auth.getSession();
+
+            if (error || !session) {
+                console.error("Auth error:", error);
+                redirect('login.html?error=session_failed');
+                return;
+            }
+
+            const user = session.user;
+            const role = await getUserRole(user);
+            console.log("Detected role:", role);
+
+            // 1. Admin / Teacher / Verifier
+            if (role === 'admin') {
+                redirect('admin_dashboard.html');
+                return;
+            } else if (role === 'teacher') {
+                const { data: tData } = await sb
+                    .from('authorized_teachers')
+                    .select('id, authorized')
+                    .eq('email', user.email.toLowerCase().trim())
+                    .maybeSingle();
+
+                if (tData && tData.authorized === false) {
+                    await sb.auth.signOut();
+                    redirect('login.html?error=locked');
+                    return;
+                }
+
+                if (tData) {
+                    await sb.from('authorized_teachers')
+                        .update({ last_login: new Date().toISOString() })
+                        .eq('id', tData.id);
+                }
+                redirect('teacher_dashboard.html');
+                return;
+            } else if (role === 'verifier') {
+                redirect('verifier_dashboard.html');
+                return;
+            }
+
+            // 2. Student flow
+            // STEP 6: Add redirect lock
+            if (sessionStorage.getItem("profileCheckComplete")) {
+                console.log("Profile check already done this session. Skipping redirects.");
+                return;
+            }
+
+            // Check approved students first
+            const { data: student } = await sb
+                .from('students')
+                .select('id, profile_completed')
+                .eq('auth_user_id', user.id)
+                .maybeSingle();
+
+            if (student) {
+                if (student.profile_completed === true) {
+                    redirect('dashboard.html');
+                } else {
+                    redirect('personal_details.html');
+                }
+                return;
+            }
+
+            // Check student_requests
+            const { data: req } = await sb
+                .from('student_requests')
+                .select('status, face_image_url, profile_completed, student_mobile, father_name, father_mobile, father_occupation')
+                .eq('auth_user_id', user.id)
+                .maybeSingle();
+
+            if (!req) {
+                redirect('profile_setup.html');
+            } else if (req.status === 'incomplete' || !req.face_image_url) {
+                redirect('face_capture.html');
+            } else if (req.status === 'pending') {
+                // Determine if they still need to finish personal details
+                const isComplete = req.profile_completed || (
+                    req.student_mobile &&
+                    req.father_name &&
+                    req.father_mobile &&
+                    req.father_occupation
+                );
+                if (!isComplete) {
+                    redirect('personal_details.html');
+                } else {
+                    redirect('pending_approval.html');
+                }
+            } else if (req.status === 'rejected') {
+                redirect('rejected_approval.html');
+            } else {
+                redirect('dashboard.html');
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Assign Teachers — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script src="actions.js" defer></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --amber: #f59e0b;
+            --amber-soft: rgba(245, 158, 11, 0.09);
+            --green: #12b76a;
+            --green-soft: rgba(18, 183, 106, 0.09);
+            --red: #e53e5a;
+            --red-soft: rgba(229, 62, 90, 0.09);
+            --purple: #7c3aed;
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp)
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -80px;
+            right: -60px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
+            padding-bottom: 50px;
+            animation: pageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(14px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 52px 20px 24px
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.15s
+        }
+
+        .back-btn:active {
+            transform: scale(0.9)
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--tp);
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.3px
+        }
+
+        .header-sub {
+            font-size: 12.5px;
+            color: var(--ts);
+            margin-top: 2px
+        }
+
+        .count-badge {
+            background: var(--amber-soft);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--amber);
+            margin-left: auto;
+            flex-shrink: 0
+        }
+
+        /* Form card */
+        .form-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 24px 22px;
+            margin: 0 18px 24px;
+            box-shadow: 0 4px 24px rgba(26, 79, 219, 0.09);
+            border: 1px solid var(--border)
+        }
+
+        .form-card-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .form-card-title svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--amber);
+            fill: none;
+            stroke-width: 2
+        }
+
+        .field {
+            margin-bottom: 16px
+        }
+
+        .field:last-of-type {
+            margin-bottom: 4px
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--ts);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 8px
+        }
+
+        /* Select */
+        .select-wrap {
+            position: relative
+        }
+
+        .select-wrap .sel-icon {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8;
+            pointer-events: none
+        }
+
+        .select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--tm);
+            pointer-events: none
+        }
+
+        .select-wrap select {
+            width: 100%;
+            padding: 13px 36px 13px 40px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            color: var(--tp);
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .select-wrap select:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3.5px rgba(26, 79, 219, 0.1);
+            background: #fff
+        }
+
+        .select-wrap select.error {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(229, 62, 90, 0.1)
+        }
+
+        .select-wrap select option {
+            color: var(--tp)
+        }
+
+        /* Selected preview card */
+        .preview-row {
+            display: grid;
+            grid-template-columns: 1fr 36px 1fr;
+            gap: 6px;
+            align-items: center;
+            margin-bottom: 18px;
+            min-height: 52px
+        }
+
+        .preview-box {
+            background: var(--bg);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            padding: 10px 12px;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .preview-box .preview-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 9px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .preview-box .preview-icon svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke-width: 2
+        }
+
+        .preview-box .preview-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--ts);
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .preview-box.filled .preview-text {
+            color: var(--tp)
+        }
+
+        .link-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .link-arrow svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 2
+        }
+
+        /* Assign button */
+        .btn-assign {
+            width: 100%;
+            padding: 15px 0;
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, #f59e0b, #f0a820);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 22px rgba(245, 158, 11, 0.35);
+            transition: transform 0.18s, box-shadow 0.18s
+        }
+
+        .btn-assign svg {
+            width: 17px;
+            height: 17px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .btn-assign:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(245, 158, 11, 0.45)
+        }
+
+        .btn-assign:active {
+            transform: scale(0.97)
+        }
+
+        .btn-assign:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        /* List */
+        .list-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px 12px
+        }
+
+        .list-head h2 {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--tp)
+        }
+
+        .list-head span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--tm)
+        }
+
+        .assign-list {
+            padding: 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .assign-row {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 16px 16px;
+            box-shadow: 0 2px 12px rgba(26, 79, 219, 0.06);
+            border: 1px solid var(--border);
+            animation: rowIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+            display: flex;
+            gap: 0;
+            flex-direction: column
+        }
+
+        @keyframes rowIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .assign-main {
+            display: flex;
+            align-items: center;
+            gap: 12px
+        }
+
+        .subject-orb {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .subject-orb svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke-width: 1.9
+        }
+
+        .assign-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .a-subject {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--tp);
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .a-tags {
+            display: flex;
+            gap: 5px;
+            margin-top: 4px;
+            flex-wrap: wrap
+        }
+
+        .a-tag {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 1.5px 8px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--blue)
+        }
+
+        .assign-divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(26, 79, 219, 0.07);
+            margin: 12px 0
+        }
+
+        .teacher-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .t-orb {
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .a-teacher-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--tp)
+        }
+
+        .a-teacher-email {
+            font-size: 11px;
+            color: var(--ts);
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px
+        }
+
+        .del-chip {
+            margin-left: auto;
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            background: var(--red-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, background 0.15s
+        }
+
+        .del-chip:hover {
+            background: rgba(229, 62, 90, 0.18)
+        }
+
+        .del-chip:active {
+            transform: scale(0.88)
+        }
+
+        .del-chip svg {
+            width: 13px;
+            height: 13px;
+            stroke: var(--red);
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        /* Empty */
+        .empty-state {
+            text-align: center;
+            padding: 36px 24px;
+            color: var(--tm)
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            stroke: #cbd9f0;
+            fill: none;
+            stroke-width: 1.4;
+            margin-bottom: 14px
+        }
+
+        .empty-state p {
+            font-size: 13.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--ts)
+        }
+
+        .empty-state small {
+            font-size: 12px
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            padding: 9px 20px;
+            z-index: 99;
+            font-size: 12.5px;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            white-space: nowrap
+        }
+
+        .toast.green {
+            background: rgba(18, 183, 106, 0.15);
+            border: 1px solid rgba(18, 183, 106, 0.4);
+            color: var(--green)
+        }
+
+        .toast.red {
+            background: rgba(229, 62, 90, 0.12);
+            border: 1px solid rgba(229, 62, 90, 0.35);
+            color: var(--red)
+        }
+
+        .toast.show {
+            opacity: 1
+        }
+
+        .skel {
+            background: linear-gradient(90deg, #e4ecff 25%, #f1f5ff 50%, #e4ecff 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 20px;
+            height: 96px;
+            margin-bottom: 10px
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 27, 62, 0.4);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            transition: opacity 0.3s;
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 24px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            animation: modalScale 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalScale {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-card h3 {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 8px;
+        }
+
+        .modal-card p {
+            font-size: 14px;
+            color: var(--ts);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #cancelDelete {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--ts);
+        }
+
+        #cancelDelete:hover {
+            background: #e4ecff;
+        }
+
+        #confirmDelete {
+            background: var(--red);
+            border: none;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(229, 62, 90, 0.2);
+        }
+
+        #confirmDelete:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(229, 62, 90, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="back-btn"
+                onclick="if(document.referrer) { history.back(); } else { window.location.href='admin_dashboard.html'; }">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+            </div>
+            <div>
+                <div class="header-title">Assign Teachers</div>
+                <div class="header-sub">Link teachers to subjects</div>
+            </div>
+            <div class="count-badge" id="countBadge">—</div>
+        </div>
+
+        <!-- Form card -->
+        <div class="form-card">
+            <div class="form-card-title">
+                <svg viewBox="0 0 24 24">
+                    <circle cx="5" cy="12" r="3" />
+                    <circle cx="19" cy="12" r="3" />
+                    <path d="M8 12h8" />
+                </svg>
+                New Assignment
+            </div>
+
+            <!-- Preview strip -->
+            <div class="preview-row">
+                <div class="preview-box" id="subjectPreview">
+                    <div class="preview-icon" style="background:#e8f0ff">
+                        <svg viewBox="0 0 24 24" stroke="#1a4fdb">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                    </div>
+                    <span class="preview-text">Pick subject</span>
+                </div>
+                <div class="link-arrow"><svg viewBox="0 0 24 24">
+                        <path d="M5 12h14M12 5l7 7-7 7" />
+                    </svg></div>
+                <div class="preview-box" id="teacherPreview">
+                    <div class="preview-icon" style="background:#fff8ec">
+                        <svg viewBox="0 0 24 24" stroke="#f59e0b">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 20v-1a8 8 0 0 1 16 0v1" />
+                        </svg>
+                    </div>
+                    <span class="preview-text">Pick teacher</span>
+                </div>
+            </div>
+
+            <!-- Subject dropdown -->
+            <div class="field">
+                <label>Subject</label>
+                <div class="select-wrap">
+                    <svg class="sel-icon" viewBox="0 0 24 24">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                    <select id="subjectSel" onchange="onSubjectChange()">
+                        <option value="">— Choose a subject —</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Section dropdown (Dynamic) -->
+            <div class="field" id="sectionField" style="display:none;">
+                <label>Section</label>
+                <div class="select-wrap">
+                    <svg class="sel-icon" viewBox="0 0 24 24">
+                        <path d="M3 9h18M3 15h18" />
+                    </svg>
+                    <select id="sectionSel" onchange="updatePreview()">
+                        <option value="NONE">None</option>
+                        <option value="A">Section A</option>
+                        <option value="B">Section B</option>
+                        <option value="C">Section C</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Teacher dropdown -->
+            <div class="field">
+                <label>Teacher</label>
+                <div class="select-wrap">
+                    <svg class="sel-icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 20v-1a8 8 0 0 1 16 0v1" />
+                    </svg>
+                    <select id="teacherSel" onchange="updatePreview()">
+                        <option value="">— Choose a teacher —</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-assign" id="assignBtn" onclick="assignTeacher()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14" />
+                </svg>
+                Assign Teacher
+            </button>
+        </div>
+
+        <!-- Assignment list -->
+        <div class="list-head" style="flex-direction:column; align-items:stretch; gap:12px; margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>Current Assignments</h2>
+                <span id="listCount">Loading…</span>
+            </div>
+
+            <!-- Filters -->
+            <div style="display:flex; gap:8px;">
+                <select id="filterYear" onchange="onYearFilterChange()"
+                    style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--border); font-size:12px; outline:none;">
+                    <option value="">Choose Year</option>
+                    <option value="1">1st Year</option>
+                    <option value="2">2nd Year</option>
+                    <option value="3">3rd Year</option>
+                    <option value="4">4th Year</option>
+                </select>
+                <select id="semesterFilter"
+                    style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--border); font-size:12px; outline:none;">
+                    <option value="">Sem —</option>
+                </select>
+                <select id="filterSection" onchange="loadAssignments()"
+                    style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--border); font-size:12px; outline:none;">
+                    <option value="ALL">All</option>
+                    <option value="NONE">None</option>
+                    <option value="A">Section A</option>
+                    <option value="B">Section B</option>
+                    <option value="C">Section C</option>
+                </select>
+            </div>
+        </div>
+        <div class="assign-list" id="assignList">
+            <div class="skel"></div>
+            <div class="skel"></div>
+        </div>
+
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal hidden">
+        <div class="modal-card">
+            <h3>Unassign Teacher</h3>
+            <p>Are you sure you want to remove this assignment?</p>
+            <div class="modal-actions">
+                <button id="cancelDelete">Cancel</button>
+                <button id="confirmDelete">Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let subjects = [];
+        let teachers = [];
+        let assignments = [];
+        let currentUser = null;
+        let currentDeleteId = null;
+
+        const semesterOptions = [
+            { value: 1, label: "Sem 1" },
+            { value: 2, label: "Sem 2" }
+        ];
+
+        const yearLabel = y => ({ '1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year' }[y] || y);
+        const avatarColors = ['#1a4fdb', '#12b76a', '#f59e0b', '#8b5cf6', '#e53e5a', '#0ea5e9'];
+
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['admin']);
+            if (!session) return;
+            currentUser = session.user;
+
+            loadSemesterDropdown();
+            await Promise.all([loadSubjects(), loadTeachers()]);
+            await loadAssignments();
+
+            // Set up realtime sync for authorized_teachers
+            setupRealtimeTeacherSync();
+
+            // Refresh list dynamically when clicking dropdown
+            document.getElementById('teacherSel').addEventListener('focus', loadTeachers);
+
+            window.addEventListener('teachersUpdated', () => {
+                loadTeachers();
+            });
+
+            // Semester filter listener
+            document.getElementById("semesterFilter").addEventListener("change", () => {
+                loadAssignments();
+            });
+
+            // Modal listeners
+            document.getElementById("cancelDelete").onclick = () => {
+                document.getElementById("deleteModal").classList.add("hidden");
+            };
+
+            document.getElementById("confirmDelete").onclick = async () => {
+                if (!currentDeleteId) return;
+
+                const btn = document.getElementById('confirmDelete');
+                btn.disabled = true;
+                btn.textContent = 'Removing...';
+
+                const { error } = await sb
+                    .from('teacher_subject_assignments')
+                    .delete()
+                    .eq('id', currentDeleteId);
+
+                btn.disabled = false;
+                btn.textContent = 'Remove';
+                document.getElementById("deleteModal").classList.add("hidden");
+
+                if (error) {
+                    console.error("Delete error:", error);
+                    showToast("Failed to delete assignment", "red");
+                    return;
+                }
+
+                showToast("Assignment removed successfully", "green");
+                loadAssignments();
+            };
+        });
+
+        function loadSemesterDropdown() {
+            const semSelect = document.getElementById("semesterFilter");
+            semSelect.innerHTML = '<option value="">Sem —</option>';
+            semesterOptions.forEach(sem => {
+                const option = document.createElement("option");
+                option.value = sem.value;
+                option.textContent = sem.label;
+                semSelect.appendChild(option);
+            });
+        }
+
+        function setupRealtimeTeacherSync() {
+            sb.channel('realtime:authorized_teachers_assign')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'authorized_teachers' }, () => {
+                    loadTeachers();
+                    window.dispatchEvent(new Event('teachersUpdated'));
+                })
+                .subscribe();
+        }
+
+        // Page-specific action success handler
+        document.addEventListener('actionSuccess', (e) => {
+            if (e.detail.action === 'unassign') loadAssignments();
+        });
+
+        async function loadSubjects() {
+            const { data } = await sb.from('subjects')
+                .select('*')
+                .order('year', { ascending: true })
+                .order('semester', { ascending: true })
+                .order('name', { ascending: true });
+            
+            subjects = data || [];
+            const sel = document.getElementById('subjectSel');
+            sel.innerHTML = '<option value="">— Choose a subject —</option>' +
+                subjects.map(s => `<option value="${s.id}">[${yearLabel(s.year)} · Sem ${s.semester}] ${escapeHTML(s.name)}</option>`).join('');
+        }
+
+        async function loadTeachers() {
+            try {
+                const { data, error } = await sb
+                    .from('authorized_teachers')
+                    .select('id, name, email')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                teachers = data || [];
+                const sel = document.getElementById('teacherSel');
+
+                // Clear dropdown completely before rendering fresh options
+                const currentVal = sel.value; // preserve selection if possible
+                sel.innerHTML = '<option value="">— Choose a teacher —</option>' +
+                    teachers.map(t => `<option value="${t.id}">${escapeHTML(t.name)} (${escapeHTML(t.email)})</option>`).join('');
+
+                if (currentVal && teachers.find(t => t.id === currentVal)) {
+                    sel.value = currentVal;
+                }
+            } catch (err) {
+                console.error("Error loading teachers:", err);
+                showToast("Failed to load active teachers", "red");
+            }
+        }
+
+        async function loadAssignments() {
+            const fYear = document.getElementById('filterYear').value;
+            const fSem = document.getElementById('semesterFilter').value;
+            const fSec = document.getElementById('filterSection').value;
+
+            let query = sb
+                .from('teacher_subject_assignments')
+                .select(`
+                    id, 
+                    section, 
+                    subject:subjects!inner(id, name, year, semester, branch, code, has_sections),
+                    teacher:authorized_teachers!inner(id, name, email)
+                `)
+                .order('created_at', { ascending: false });
+
+            if (fYear) {
+                query = query.eq('subjects.year', fYear);
+            }
+            if (fSem) {
+                query = query.eq('subjects.semester', fSem);
+            }
+            if (fSec && fSec !== 'ALL') {
+                query = query.eq('section', fSec);
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error("Load assignments error:", error);
+                showToast("Failed to load assignments", "red");
+                return;
+            }
+            assignments = data || [];
+            renderList();
+        }
+
+        function onYearFilterChange() {
+            loadAssignments();
+        }
+
+        async function onSubjectChange() {
+            const subId = document.getElementById('subjectSel').value;
+            const secField = document.getElementById('sectionField');
+            const secSel = document.getElementById('sectionSel');
+
+            // 1. IMMEDIATE RESET (Prevent state leak)
+            secField.style.display = 'none';
+            secSel.innerHTML = `
+                <option value="NONE">None</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+                <option value="C">Section C</option>
+            `;
+            secSel.value = 'NONE';
+            updatePreview();
+
+            if (!subId) return;
+
+            // 2. ALWAYS SHOW SECTION DROPDOWN FOR SELECTED SUBJECT
+            secField.style.display = 'block';
+            console.log("Selected subject:", subId);
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const subId = document.getElementById('subjectSel').value;
+            const tchId = document.getElementById('teacherSel').value;
+            const sub = subjects.find(s => s.id === subId);
+            const tch = teachers.find(t => t.id === tchId);
+
+            const sp = document.getElementById('subjectPreview');
+            if (sub) {
+                sp.classList.add('filled');
+                sp.querySelector('.preview-text').textContent = sub.name;
+            } else {
+                sp.classList.remove('filled');
+                sp.querySelector('.preview-text').textContent = 'Pick subject';
+            }
+
+            const tp = document.getElementById('teacherPreview');
+            if (tch) {
+                tp.classList.add('filled');
+                tp.querySelector('.preview-text').textContent = tch.name;
+            } else {
+                tp.classList.remove('filled');
+                tp.querySelector('.preview-text').textContent = 'Pick teacher';
+            }
+        }
+
+        function renderList() {
+            // Local filtering removed. loadAssignments() now handles backend filtering.
+            let filtered = assignments;
+
+            document.getElementById('countBadge').textContent = `${filtered.length} assignment${filtered.length !== 1 ? 's' : ''}`;
+            document.getElementById('listCount').textContent = `${filtered.length} total`;
+            const container = document.getElementById('assignList');
+
+            if (!filtered.length) {
+                container.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/><path d="M8 12h8"/></svg>
+                    <p>No assignments found</p>
+                    <small>Try changing filters or add a new one</small>
+                </div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map((a, i) => {
+                const t = a.teacher;
+                const s = a.subject;
+                if (!t || !s) return '';
+
+                const tcColor = avatarColors[t.name.charCodeAt(0) % avatarColors.length];
+                const tInit = t.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                const tInitEsc = escapeHTML(tInit);
+
+                return `
+                <div class="assign-row" id="arow-${a.id}" style="animation-delay:${i * 0.04}s">
+                    <div class="assign-main">
+                        <div class="subject-orb" style="background:${s.has_sections ? 'var(--amber-soft)' : '#e8f0ff'}">
+                            <svg viewBox="0 0 24 24" stroke="${s.has_sections ? 'var(--amber)' : '#1a4fdb'}">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                            </svg>
+                        </div>
+                        <div class="assign-info">
+                            <div class="a-subject">${escapeHTML(s.name)}</div>
+                            <div class="a-tags">
+                                <span class="a-tag">Year ${s.year}</span>
+                                <span class="a-tag">Sem ${s.semester}</span>
+                                ${a.section !== 'NONE' ? `<span class="a-tag" style="background:var(--amber-soft); color:var(--amber); border-color:rgba(245, 158, 11, 0.2)">Sec ${escapeHTML(a.section)}</span>` : ''}
+                                <span class="a-tag">${escapeHTML(s.branch)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="assign-divider"></div>
+                    <div class="teacher-chip">
+                        <div class="t-orb" style="background:${tcColor}18;color:${tcColor}">${tInitEsc}</div>
+                        <div style="flex:1;min-width:0">
+                            <div class="a-teacher-name">${escapeHTML(t.name)}</div>
+                            <div class="a-teacher-email">${escapeHTML(t.email)}</div>
+                        </div>
+                        <button class="del-chip" 
+                                onclick="openDeleteModal('${a.id}')"
+                                title="Unassign">
+                            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function assignTeacher() {
+            const subId = document.getElementById('subjectSel').value;
+            const tchId = document.getElementById('teacherSel').value;
+            const section = document.getElementById('sectionSel').value;
+            let valid = true;
+
+            if (!subId) {
+                document.getElementById('subjectSel').classList.add('error');
+                showToast("Select a subject", "red");
+                return;
+            }
+            if (!tchId) {
+                document.getElementById('teacherSel').classList.add('error');
+                showToast("Select a teacher", "red");
+                return;
+            }
+
+            const btn = document.getElementById('assignBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg> Assigning…`;
+
+            const isSecVisible = document.getElementById('sectionField').style.display === 'block';
+
+            // Find subject details for year/semester
+            const subData = subjects.find(s => s.id === subId);
+            const year = subData ? parseInt(subData.year) : null;
+            const semester = subData ? parseInt(subData.semester) : null;
+
+            // Insert into teacher_subject_assignments
+            const { error } = await sb
+                .from('teacher_subject_assignments')
+                .insert({
+                    subject_id: subId,
+                    teacher_id: tchId,
+                    year: year,
+                    semester: semester,
+                    section: isSecVisible ? section : 'NONE',
+                    assigned_by: currentUser.id
+                });
+
+            btn.disabled = false;
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Assign Teacher`;
+
+            if (error) {
+                if (error.code === '23505') {
+                    showToast('This section already has a teacher assigned for this subject.', 'red');
+                } else {
+                    showToast('Error: ' + error.message, 'red');
+                }
+                return;
+            }
+
+            document.getElementById('subjectSel').value = '';
+            document.getElementById('teacherSel').value = '';
+            document.getElementById('sectionSel').value = 'NONE';
+            onSubjectChange(); // Resets preview and hides section field if needed
+
+            const tch = teachers.find(t => t.id === tchId);
+            const sub = subjects.find(s => s.id === subId);
+            showToast(`✓ Assigned ${tch?.name} for ${sub?.name}${section !== 'NONE' ? ' (' + section + ')' : ''}`, 'green');
+            await loadAssignments();
+        }
+
+        function openDeleteModal(assignmentId) {
+            currentDeleteId = assignmentId;
+            document.getElementById("deleteModal").classList.remove("hidden");
+        }
+
+        // Logic to reset filters on initial clean load
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('filterYear').value = '';
+            document.getElementById('semesterFilter').value = '';
+            document.getElementById('filterSection').value = 'ALL';
+        });
+
+
+
+        function showToast(msg, type = 'green') {
+            const t = document.getElementById('toast');
+            t.className = `toast ${type} show`;
+            t.textContent = msg;
+            setTimeout(() => t.classList.remove('show'), 2800);
+        }
+    </script>
+</body>
+
+</html>

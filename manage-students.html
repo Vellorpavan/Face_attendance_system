@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Manage Students — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --green: #12b76a;
+            --green-soft: rgba(18, 183, 106, 0.09);
+            --red: #e53e5a;
+            --red-soft: rgba(229, 62, 90, 0.09);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+        }
+
+        html, body { min-height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tp); }
+
+        body::before {
+            content: ''; position: fixed; top: -80px; right: -60px;
+            width: 260px; height: 260px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(100,165,255,0.18) 0%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .page {
+            position: relative; z-index: 1; max-width: 480px; margin: 0 auto;
+            padding-bottom: 56px;
+            animation: pageIn 0.45s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        @keyframes pageIn { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ── Header ── */
+        .header { display:flex; align-items:center; gap:12px; padding:52px 20px 20px; }
+
+        .back-btn {
+            width:40px; height:40px; border-radius:13px;
+            background:var(--card); border:1px solid var(--border);
+            box-shadow:0 2px 8px rgba(0,0,0,0.05);
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; flex-shrink:0; transition:transform 0.15s;
+        }
+        .back-btn:active { transform:scale(0.9); }
+        .back-btn svg { width:18px; height:18px; stroke:var(--tp); fill:none; stroke-width:2.2; }
+
+        .header-info { flex:1; }
+        .header-title { font-size:20px; font-weight:800; color:var(--tp); letter-spacing:-0.3px; }
+        .header-sub { font-size:12.5px; color:var(--ts); margin-top:2px; }
+
+        .count-badge {
+            background:var(--blue-soft); border:1px solid var(--blue-border);
+            border-radius:999px; padding:4px 12px; font-size:12px; font-weight:700;
+            color:var(--blue); white-space:nowrap;
+        }
+
+        /* ── Stats Row ── */
+        .stats-wrap { padding:0 18px 18px; }
+        .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .stat-card {
+            background:var(--card); border-radius:16px; border:1px solid var(--border);
+            padding:15px 16px; box-shadow:0 2px 8px rgba(26,79,219,0.05);
+        }
+        .stat-label { font-size:10.5px; font-weight:700; color:var(--tm); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+        .stat-num { font-size:26px; font-weight:800; color:var(--tp); letter-spacing:-0.5px; line-height:1; }
+        .stat-sub { font-size:11px; color:var(--tm); margin-top:2px; }
+
+        /* ── Search ── */
+        .search-wrap { padding:0 18px 12px; }
+        .search-box {
+            display:flex; align-items:center; gap:10px;
+            background:var(--card); border-radius:16px; border:1.5px solid var(--border);
+            padding:12px 16px; box-shadow:0 2px 8px rgba(26,79,219,0.06);
+            transition:border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-box:focus-within { border-color:var(--blue); box-shadow:0 0 0 3.5px rgba(26,79,219,0.1); }
+        .search-box svg { width:17px; height:17px; stroke:var(--tm); fill:none; stroke-width:2; flex-shrink:0; }
+        .search-box input { flex:1; border:none; outline:none; font-family:'Inter',sans-serif; font-size:14px; color:var(--tp); background:transparent; }
+        .search-box input::placeholder { color:#b8cce0; }
+
+        /* ── Filters ── */
+        .filters-wrap { padding:0 18px 14px; }
+        .filters-label {
+            font-size:11px; font-weight:800; color:var(--tm);
+            text-transform:uppercase; letter-spacing:0.8px;
+            margin-bottom:10px; padding-left:2px;
+            display:flex; align-items:center; gap:6px;
+        }
+        .filters-label svg { width:13px; height:13px; stroke:var(--blue); fill:none; stroke-width:2.5; flex-shrink:0; }
+        .filters-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+        .filter-select {
+            width:100%; padding:9px 26px 9px 10px;
+            border-radius:12px; border:1.5px solid var(--border);
+            background:var(--card); font-family:'Inter',sans-serif;
+            font-size:12px; font-weight:600; color:var(--tp);
+            outline:none; cursor:pointer; appearance:none;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238fa4c0' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 8px center;
+            transition:border-color 0.2s;
+        }
+        .filter-select:focus { border-color:var(--blue); }
+        .filter-reset {
+            grid-column: 1 / -1; padding:9px;
+            border-radius:12px; border:1.5px solid var(--border);
+            background:transparent; font-family:'Inter',sans-serif;
+            font-size:12px; font-weight:700; color:var(--tm);
+            cursor:pointer; transition:background 0.2s, color 0.2s;
+        }
+        .filter-reset:hover { background:#e4ecff; color:var(--blue); }
+
+        /* ── List head ── */
+        .list-head { display:flex; align-items:center; justify-content:space-between; padding:0 22px 12px; }
+        .list-head h2 { font-size:15px; font-weight:800; color:var(--tp); }
+        .list-head span { font-size:12px; font-weight:600; color:var(--tm); }
+
+        /* ── Student List ── */
+        .student-list { padding:0 18px; display:flex; flex-direction:column; gap:10px; }
+
+        .student-row {
+            background:var(--card); border-radius:18px; padding:14px;
+            display:flex; align-items:center; gap:13px;
+            box-shadow:0 2px 12px rgba(26,79,219,0.06); border:1px solid var(--border);
+            animation:rowIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
+            transition:box-shadow 0.2s, transform 0.15s;
+        }
+        .student-row:hover { box-shadow:0 4px 20px rgba(26,79,219,0.12); }
+        .student-row:active { transform:scale(0.985); }
+
+        @keyframes rowIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        .s-avatar {
+            width:46px; height:46px; border-radius:14px; flex-shrink:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:16px; font-weight:800; overflow:hidden;
+        }
+        .s-avatar img { width:100%; height:100%; object-fit:cover; }
+
+        .s-info { flex:1; min-width:0; }
+        .s-name { font-size:14px; font-weight:700; color:var(--tp); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .s-roll { font-size:11.5px; color:var(--ts); margin-top:2px; }
+        .s-meta { font-size:10.5px; color:var(--tm); margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+        .s-right { display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0; }
+
+        .badge { border-radius:999px; padding:3px 10px; font-size:10.5px; font-weight:700; }
+        .badge-student { background:var(--blue-soft); border:1px solid var(--blue-border); color:var(--blue); }
+        .badge-warning { background:var(--red-soft); border:1px solid var(--red-soft); color:var(--red); }
+
+        .parent-btn {
+            width:34px; height:34px; border-radius:11px;
+            border:1px solid var(--blue-border); background:var(--blue-soft);
+            cursor:pointer; display:flex; align-items:center; justify-content:center;
+            flex-shrink:0; transition:transform 0.15s, background 0.15s;
+        }
+        .parent-btn:hover { background:rgba(26,79,219,0.14); }
+        .parent-btn:active { transform:scale(0.88); }
+        .parent-btn svg { width:15px; height:15px; stroke:var(--blue); fill:none; stroke-width:2.2; }
+
+        /* ── Skeleton ── */
+        .skel {
+            background:linear-gradient(90deg,#e4ecff 25%,#f1f5ff 50%,#e4ecff 75%);
+            background-size:200% 100%; animation:shimmer 1.4s infinite;
+            border-radius:18px; height:78px; margin-bottom:10px;
+        }
+        @keyframes shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+        /* ── Empty ── */
+        .empty-state { text-align:center; padding:48px 30px; }
+        .empty-state svg { width:46px; height:46px; stroke:#cbd9f0; fill:none; stroke-width:1.4; margin-bottom:12px; }
+        .empty-state p { font-size:13.5px; font-weight:600; color:var(--ts); margin-bottom:4px; }
+        .empty-state small { font-size:12px; color:var(--tm); }
+
+        /* ── Modal ── */
+        .modal-overlay {
+            position:fixed; inset:0; background:rgba(13,27,62,0.45);
+            backdrop-filter:blur(6px); z-index:100;
+            display:flex; align-items:flex-end; justify-content:center;
+            opacity:0; pointer-events:none; transition:opacity 0.3s;
+        }
+        .modal-overlay.open { opacity:1; pointer-events:all; }
+        .modal-sheet {
+            background:var(--card); border-radius:28px 28px 0 0;
+            padding:22px 22px 40px; width:100%; max-width:480px;
+            max-height:82vh; overflow-y:auto;
+            transform:translateY(20px);
+            transition:transform 0.35s cubic-bezier(0.22,1,0.36,1);
+        }
+        .modal-overlay.open .modal-sheet { transform:translateY(0); }
+        .modal-handle { width:36px; height:4px; background:#dde6f8; border-radius:999px; margin:0 auto 20px; }
+        .modal-title { font-size:18px; font-weight:800; color:var(--tp); letter-spacing:-0.4px; margin-bottom:3px; }
+        .modal-sub { font-size:12.5px; color:var(--ts); margin-bottom:20px; }
+        .parent-section {
+            background:var(--bg); border-radius:16px; padding:16px;
+            margin-bottom:12px; border:1px solid var(--border);
+        }
+        .parent-section-title {
+            font-size:10.5px; font-weight:800; letter-spacing:0.8px;
+            text-transform:uppercase; margin-bottom:12px;
+            display:flex; align-items:center; gap:5px;
+        }
+        .pf-row { display:flex; gap:8px; margin-bottom:8px; }
+        .pf-row:last-child { margin-bottom:0; }
+        .pf-label { font-size:11.5px; font-weight:600; color:var(--tm); width:82px; flex-shrink:0; }
+        .pf-value { font-size:13px; font-weight:600; color:var(--tp); }
+        .close-btn {
+            width:100%; padding:14px 0; border-radius:16px;
+            border:1.5px solid var(--border); background:var(--bg);
+            color:var(--ts); font-family:'Inter',sans-serif;
+            font-size:14px; font-weight:700; cursor:pointer; margin-top:14px;
+            transition:background 0.2s, color 0.2s;
+        }
+        .close-btn:hover { background:#e4ecff; color:var(--tp); }
+
+        /* ── Improved Modal Context ── */
+        .modal-photo-wrap { display: flex; justify-content: center; margin-bottom: 20px; }
+        .modal-photo {
+            width: 120px; height: 120px; border-radius: 50%; object-fit: cover;
+            border: 3px solid #fff; box-shadow: 0 4px 20px rgba(26,79,219,0.18);
+            background: var(--blue-soft); display: flex; align-items: center; justify-content: center;
+            font-size: 42px; font-weight: 800; color: var(--blue);
+            cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+        .modal-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .modal-photo:hover { transform: scale(1.05); box-shadow: 0 6px 25px rgba(26,79,219,0.25); }
+
+        /* ── Photo Zoom ── */
+        .photo-zoom-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(8px); z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+        }
+        .photo-zoom-overlay.open { opacity: 1; pointer-events: all; }
+        .zoom-content {
+            position: relative; width: 85%; max-width: 400px; aspect-ratio: 1/1;
+            transform: scale(0.85); transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .photo-zoom-overlay.open .zoom-content { transform: scale(1); }
+        .zoom-content img {
+            width: 100%; height: 100%; object-fit: cover; 
+            border-radius: 50%; border: 4px solid #fff;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .zoom-close {
+            position: absolute; top: 0; right: 0;
+            width: 40px; height: 40px; border-radius: 50%;
+            background: #fff; border: none; font-size: 18px; font-weight: 800;
+            color: var(--tp); cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2); transform: translate(30%, -30%);
+        }
+        .modal-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .edit-btn {
+            padding: 6px 14px; border-radius: 999px; background: var(--blue-soft);
+            border: 1px solid var(--blue-border); color: var(--blue);
+            font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+        }
+        .edit-btn:hover { background: var(--blue); color: #fff; }
+        .edit-btn.cancel { background: var(--red-soft); border-color: var(--red-soft); color: var(--red); }
+        .edit-btn.cancel:hover { background: var(--red); color: #fff; }
+
+        .pf-input {
+            width: 100%; padding: 6px 10px; border: 1.5px solid var(--border);
+            border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px;
+            color: var(--tp); background: #fff; outline: none; transition: border-color 0.2s;
+        }
+        .pf-input:focus { border-color: var(--blue); }
+
+        .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+        .save-btn {
+            width: 100%; padding: 14px 0; border-radius: 16px;
+            background: var(--blue); color: #fff; border: none;
+            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(26,79,219,0.25);
+            transition: transform 0.15s, opacity 0.2s;
+        }
+        .save-btn:active { transform: scale(0.98); }
+        .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* ── Toast ── */
+        .toast {
+            position:fixed; top:22px; left:50%; transform:translateX(-50%);
+            border-radius:999px; padding:9px 20px; z-index:200;
+            font-size:12.5px; font-weight:600; opacity:0; pointer-events:none;
+            transition:opacity 0.3s; white-space:nowrap;
+        }
+        .toast.green { background:rgba(18,183,106,0.15); border:1px solid rgba(18,183,106,0.4); color:var(--green); }
+        .toast.red   { background:rgba(229,62,90,0.12);  border:1px solid rgba(229,62,90,0.35);  color:var(--red); }
+        .toast.show  { opacity:1; }
+    </style>
+</head>
+
+<body>
+<div class="page">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="back-btn" onclick="window.location.href='admin_dashboard.html'" title="Back to Dashboard">
+            <svg viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </div>
+        <div class="header-info">
+            <div class="header-title">Manage Students</div>
+            <div class="header-sub">Student registry — AI Branch</div>
+        </div>
+        <div class="count-badge" id="countBadge">— students</div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-wrap">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Students</div>
+                <div class="stat-num" id="statTotal">—</div>
+                <div class="stat-sub">in database</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Showing</div>
+                <div class="stat-num" id="statShowing">—</div>
+                <div class="stat-sub">after filters</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+        <div class="search-box">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="searchInput" placeholder="Search by name, roll number…"
+                oninput="applyFilters()" autocomplete="off" />
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-wrap">
+        <div class="filters-label">
+            <svg viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+            Filter Students
+        </div>
+        <div class="filters-grid">
+            <select class="filter-select" id="filterYear" onchange="applyFilters()">
+                <option value="">All Years</option>
+                <option value="1">1st Year</option>
+                <option value="2">2nd Year</option>
+                <option value="3">3rd Year</option>
+                <option value="4">4th Year</option>
+            </select>
+            <select class="filter-select" id="filterSemester" onchange="applyFilters()">
+                <option value="">All Sems</option>
+                <option value="1">Sem 1</option>
+                <option value="2">Sem 2</option>
+            </select>
+            <select class="filter-select" id="filterSection" onchange="applyFilters()">
+                <option value="">All Sections</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+                <option value="C">Section C</option>
+                <option value="None">None</option>
+            </select>
+            <button class="filter-reset" onclick="resetFilters()">✕ Clear Filters</button>
+        </div>
+    </div>
+
+    <!-- List header -->
+    <div class="list-head">
+        <h2>All Students</h2>
+        <span id="listCount">Loading…</span>
+    </div>
+
+    <!-- Student list -->
+    <div class="student-list" id="studentList">
+        <div class="skel"></div>
+        <div class="skel"></div>
+        <div class="skel"></div>
+    </div>
+</div>
+
+<!-- Parent Details Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div id="modalPhotoContainer" class="modal-photo-wrap"></div>
+        <div class="modal-header-row">
+            <div>
+                <div class="modal-title" id="modalTitle"></div>
+                <div class="modal-sub" id="modalSub"></div>
+            </div>
+            <button class="edit-btn" id="editToggleBtn" onclick="toggleEditMode()">Edit</button>
+        </div>
+        <div id="modalContent"></div>
+        <div id="viewActions">
+            <button class="close-btn" onclick="closeModal()">Close</button>
+        </div>
+        <div id="editActions" style="display: none;" class="modal-actions">
+            <button class="close-btn" style="margin-top:0" onclick="toggleEditMode()">Cancel</button>
+            <button class="save-btn" id="saveBtn" onclick="saveStudentDetails()">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Photo Zoom Modal -->
+<div class="photo-zoom-overlay" id="photoZoomOverlay" onclick="closeZoom()">
+    <div class="zoom-content" onclick="event.stopPropagation()">
+        <img id="zoomedPhoto" src="" alt="Zoomed Student Photo">
+        <button class="zoom-close" onclick="closeZoom()">✕</button>
+    </div>
+</div>
+
+<script>
+    let allStudents = [];
+    const avatarColors = ['#1a4fdb','#12b76a','#f59e0b','#8b5cf6','#e53e5a','#0ea5e9'];
+
+    /* ── Auth + Init ── */
+    window.addEventListener('load', async () => {
+        const { session, role } = await protectRoute(['admin']);
+        if (!session) return;
+        restoreFilters(); 
+        await loadStudents();
+    });
+
+    /* ── Load Students ── */
+    async function loadStudents() {
+        const container = document.getElementById('studentList');
+        container.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+
+        const { data, error } = await sb
+            .from('students')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('Students loading error:', error);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                    <p>Error loading students</p>
+                    <small>${error.message}</small>
+                </div>`;
+            document.getElementById('listCount').textContent = 'Error';
+            return;
+        }
+
+        allStudents = data || [];
+        
+        // Rule 5: Calculate duplicate father mobiles
+        const fatherCounts = {};
+        allStudents.forEach(s => {
+            const fMob = (s.father_mobile || '').trim();
+            if (fMob && fMob !== '—') {
+                fatherCounts[fMob] = (fatherCounts[fMob] || 0) + 1;
+            }
+        });
+        duplicateFatherMobiles = new Set(
+            Object.keys(fatherCounts).filter(mob => fatherCounts[mob] > 1)
+        );
+
+        updateStats(allStudents);
+        applyFilters(); 
+    }
+
+    /* ── Apply Filters ── */
+    function applyFilters() {
+        const q    = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+        const year = document.getElementById('filterYear').value;
+        const sem  = document.getElementById('filterSemester').value;
+        const sec  = document.getElementById('filterSection').value;
+
+        // Save to sessionStorage
+        sessionStorage.setItem("manage_filter_q", q);
+        sessionStorage.setItem("manage_filter_year", year);
+        sessionStorage.setItem("manage_filter_sem", sem);
+        sessionStorage.setItem("manage_filter_section", sec);
+
+        const filtered = allStudents.filter(s => {
+            if (year && String(s.year     || '') !== year) return false;
+            if (sem  && String(s.semester || '') !== sem)  return false;
+            if (sec  && (s.section || '')         !== sec) return false;
+            if (q) {
+                const name = (s.name || '').toLowerCase();
+                const roll = (s.roll_number || '').toLowerCase();
+                if (!name.includes(q) && !roll.includes(q)) return false;
+            }
+            return true;
+        });
+
+        updateStats(filtered);
+        renderList(sortByRoll(filtered));
+    }
+
+    function restoreFilters() {
+        const q    = sessionStorage.getItem("manage_filter_q");
+        const year = sessionStorage.getItem("manage_filter_year");
+        const sem  = sessionStorage.getItem("manage_filter_sem");
+        const sec  = sessionStorage.getItem("manage_filter_section");
+
+        if (q !== null)    document.getElementById('searchInput').value = q;
+        if (year !== null) document.getElementById('filterYear').value = year;
+        if (sem !== null)  document.getElementById('filterSemester').value = sem;
+        if (sec !== null)  document.getElementById('filterSection').value = sec;
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('filterYear').value = '';
+        document.getElementById('filterSemester').value = '';
+        document.getElementById('filterSection').value = '';
+        
+        // Clear sessionStorage
+        sessionStorage.removeItem("manage_filter_q");
+        sessionStorage.removeItem("manage_filter_year");
+        sessionStorage.removeItem("manage_filter_sem");
+        sessionStorage.removeItem("manage_filter_section");
+
+        updateStats(allStudents);
+        renderList(sortByRoll(allStudents));
+    }
+
+    /* ── Sort by Roll Number ── */
+    function sortByRoll(students) {
+        return [...students].sort((a, b) => {
+            const rollA = a.roll_number || '';
+            const rollB = b.roll_number || '';
+
+            // 1. Sort by admission year (first two digits)
+            const yearA = parseInt(rollA.slice(0, 2)) || 0;
+            const yearB = parseInt(rollB.slice(0, 2)) || 0;
+
+            if (yearA !== yearB) {
+                return yearA - yearB;
+            }
+
+            // 2. Sort by sequence suffix (base-36)
+            const suffixA = rollA.slice(-2);
+            const suffixB = rollB.slice(-2);
+            const numA = parseInt(suffixA, 36) || 0;
+            const numB = parseInt(suffixB, 36) || 0;
+
+            return numA - numB;
+        });
+    }
+
+    function updateStats(filtered) {
+        document.getElementById('statTotal').textContent   = allStudents.length;
+        document.getElementById('statShowing').textContent = filtered.length;
+        document.getElementById('countBadge').textContent  =
+            `${allStudents.length} student${allStudents.length !== 1 ? 's' : ''}`;
+    }
+
+    /* ── Render List ── */
+    function renderList(students) {
+        const container = document.getElementById('studentList');
+        document.getElementById('listCount').textContent =
+            `${students.length} student${students.length !== 1 ? 's' : ''}`;
+
+        if (students.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/></svg>
+                    <p>No students found</p>
+                    <small>Try adjusting your search or filters</small>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = students.map((s, i) => {
+            const nameEsc = escapeHTML(s.name || 'Student');
+            const rollEsc = escapeHTML(s.roll_number || '—');
+            const branchEsc = escapeHTML(s.branch || 'AI');
+            const yearEsc = escapeHTML(String(s.year || '?'));
+            const semEsc = escapeHTML(String(s.semester || '?'));
+            const secEsc = escapeHTML(s.section || '—');
+
+            const initials = nameEsc.split(' ').slice(0,2).map(w => w[0]||'').join('').toUpperCase() || 'S';
+            const color    = avatarColors[i % avatarColors.length];
+            const avatar   = s.face_image_url
+                ? `<img src="${s.face_image_url}" alt="${nameEsc}" onerror="this.parentNode.innerHTML=escapeHTML('${initials}')">`
+                : initials;
+            const isInvalidParent = s.father_mobile && duplicateFatherMobiles.has(s.father_mobile.trim());
+            const invalidBadge = isInvalidParent 
+                ? `<span class="badge badge-warning" title="Duplicate Father Mobile detected across multiple students" style="background:rgba(229, 62, 90, 0.1);color:#e53e5a;border:1px solid rgba(229, 62, 90, 0.2)">INVALID PARENT</span>` 
+                : '';
+            
+            const isIncomplete = 
+                !(s.student_mobile?.trim()) || 
+                !(s.father_name?.trim()) || 
+                !(s.father_occupation?.trim()) || 
+                !(s.father_mobile?.trim());
+
+            const incompleteBadge = isIncomplete
+                ? `<span class="badge" style="background:rgba(245, 158, 11, 0.1);color:#f59e0b;border:1px solid rgba(245, 158, 11, 0.2)">INCOMPLETE PROFILE</span>`
+                : '';
+
+            return `
+            <div class="student-row" id="row-${s.id}" style="animation-delay:${Math.min(i,12)*0.04}s">
+                <div class="s-avatar" style="background:${color}18;color:${color};border:1px solid ${color}28">
+                    ${avatar}
+                </div>
+                <div class="s-info">
+                    <div class="s-name">${nameEsc} ${invalidBadge} ${incompleteBadge}</div>
+                    <div class="s-roll">${rollEsc}</div>
+                    <div class="s-meta">
+                        ${branchEsc} · Year ${yearEsc} · Sem ${semEsc} · Sec ${secEsc}
+                    </div>
+                </div>
+                <div class="s-right">
+                    <span class="badge badge-student">STUDENT</span>
+                    <button class="parent-btn" title="View Parent Details"
+                            onclick="openParentDetails('${s.id}')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    /* ── Parent Details Modal ── */
+    let currentStudentId = null;
+    let isEditMode = false;
+    let duplicateFatherMobiles = new Set();
+
+    function isValidMobile(num) {
+        return /^[0-9]{10}$/.test(num);
+    }
+
+    function openParentDetails(studentId) {
+        currentStudentId = studentId;
+        isEditMode = false;
+        const s = allStudents.find(st => st.id === studentId);
+        if (!s) return;
+
+        // Rule 4: Detect existing invalid records
+        const sMob = (s.student_mobile || '').trim();
+        const fMob = (s.father_mobile || '').trim();
+        if (sMob && fMob && sMob === fMob) {
+            setTimeout(() => {
+                alert("Data Integrity Issue\n\nThis student has the same mobile number for student and father.\n\nPlease update the father details now.");
+            }, 500);
+        }
+
+        const name = s.name || 'Student';
+        
+        // Photo
+        const avatarColor = avatarColors[allStudents.indexOf(s) % avatarColors.length];
+        const initials = name.split(' ').slice(0,2).map(w => w[0]||'').join('').toUpperCase() || 'S';
+        const photoHtml = s.face_image_url 
+            ? `<img src="${s.face_image_url}" class="modal-photo" alt="${escapeHTML(name)}" onclick="openZoom('${s.face_image_url}')">`
+            : `<div class="modal-photo" style="background:${avatarColor}18;color:${avatarColor};border:1px solid ${avatarColor}28" onclick="openZoom(null, '${escapeHTML(initials)}', '${avatarColor}')">${escapeHTML(initials)}</div>`;
+        document.getElementById('modalPhotoContainer').innerHTML = photoHtml;
+
+        document.getElementById('modalTitle').textContent = name;
+        document.getElementById('modalSub').textContent =
+            [s.roll_number, s.branch, s.year ? `Year ${s.year}` : ''].filter(Boolean).join(' · ');
+
+        document.getElementById('editToggleBtn').style.display = 'block';
+        document.getElementById('editToggleBtn').textContent = 'Edit';
+        document.getElementById('editToggleBtn').classList.remove('cancel');
+        document.getElementById('viewActions').style.display = 'block';
+        document.getElementById('editActions').style.display = 'none';
+
+        renderModalContent(s);
+        document.getElementById('modalOverlay').classList.add('open');
+    }
+
+    function renderModalContent(s) {
+        const studentMobile = s.student_mobile || s.mobile || s.phone || '';
+        
+        if (isEditMode) {
+            document.getElementById('modalContent').innerHTML = `
+                <div class="parent-section">
+                    <div class="parent-section-title" style="color:#0ea5e9">Student Details</div>
+                    <div class="pf-row">
+                        <span class="pf-label">Mobile</span>
+                        <input type="text" class="pf-input" id="edit_student_mobile" value="${escapeHTML(studentMobile)}">
+                    </div>
+                </div>
+                <div class="parent-section">
+                    <div class="parent-section-title" style="color:#1a4fdb">Father's Details</div>
+                    <div class="pf-row"><span class="pf-label">Name</span><input type="text" class="pf-input" id="edit_father_name" value="${escapeHTML(s.father_name || '')}"></div>
+                    <div class="pf-row"><span class="pf-label">Occupation</span><input type="text" class="pf-input" id="edit_father_occupation" value="${escapeHTML(s.father_occupation || '')}"></div>
+                    <div class="pf-row"><span class="pf-label">Mobile</span><input type="text" class="pf-input" id="edit_father_mobile" value="${escapeHTML(s.father_mobile || '')}"></div>
+                </div>
+                <div class="parent-section">
+                    <div class="parent-section-title" style="color:#12b76a">Mother's Details</div>
+                    <div class="pf-row"><span class="pf-label">Name</span><input type="text" class="pf-input" id="edit_mother_name" value="${escapeHTML(s.mother_name || '')}"></div>
+                    <div class="pf-row"><span class="pf-label">Occupation</span><input type="text" class="pf-input" id="edit_mother_occupation" value="${escapeHTML(s.mother_occupation || '')}"></div>
+                    <div class="pf-row"><span class="pf-label">Mobile</span><input type="text" class="pf-input" id="edit_mother_mobile" value="${escapeHTML(s.mother_mobile || '')}"></div>
+                </div>`;
+        } else {
+            document.getElementById('modalContent').innerHTML = `
+                <div class="parent-section">
+                    <div class="parent-section-title" style="color:#0ea5e9">
+                        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:#0ea5e9;fill:none;stroke-width:2.2">
+                            <circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/>
+                        </svg>
+                        Student Details
+                    </div>
+                    <div class="pf-row"><span class="pf-label">Name</span><span class="pf-value">${escapeHTML(s.name || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Roll No</span><span class="pf-value">${escapeHTML(s.roll_number || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Branch</span><span class="pf-value">${escapeHTML(s.branch || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Year / Sem</span><span class="pf-value">Year ${escapeHTML(String(s.year || '?'))} · Sem ${escapeHTML(String(s.semester || '?'))}</span></div>
+                    <div class="pf-row"><span class="pf-label">Section</span><span class="pf-value">${escapeHTML(s.section || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Mobile</span><span class="pf-value">${escapeHTML(studentMobile || 'Not provided')}</span></div>
+                </div>
+                <div class="parent-section">
+                    <div class="parent-section-title" style="color:#1a4fdb">
+                        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:#1a4fdb;fill:none;stroke-width:2.2">
+                            <circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/>
+                        </svg>
+                        Father's Details
+                    </div>
+                    <div class="pf-row"><span class="pf-label">Name</span><span class="pf-value">${escapeHTML(s.father_name || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Occupation</span><span class="pf-value">${escapeHTML(s.father_occupation || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Mobile</span><span class="pf-value">${escapeHTML(s.father_mobile || '—')}</span></div>
+                </div>
+                <div class="parent-section">
+                    <div class="parent-section-title" style="color:#12b76a">
+                        <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:#12b76a;fill:none;stroke-width:2.2">
+                            <circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/>
+                        </svg>
+                        Mother's Details
+                    </div>
+                    <div class="pf-row"><span class="pf-label">Name</span><span class="pf-value">${escapeHTML(s.mother_name || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Occupation</span><span class="pf-value">${escapeHTML(s.mother_occupation || '—')}</span></div>
+                    <div class="pf-row"><span class="pf-label">Mobile</span><span class="pf-value">${escapeHTML(s.mother_mobile || '—')}</span></div>
+                </div>`;
+        }
+    }
+
+    function toggleEditMode() {
+        isEditMode = !isEditMode;
+        const s = allStudents.find(st => st.id === currentStudentId);
+        if (!s) return;
+
+        const btn = document.getElementById('editToggleBtn');
+        if (isEditMode) {
+            btn.textContent = 'Cancel Edit';
+            btn.classList.add('cancel');
+            document.getElementById('viewActions').style.display = 'none';
+            document.getElementById('editActions').style.display = 'grid';
+        } else {
+            btn.textContent = 'Edit';
+            btn.classList.remove('cancel');
+            document.getElementById('viewActions').style.display = 'block';
+            document.getElementById('editActions').style.display = 'none';
+        }
+        renderModalContent(s);
+    }
+
+    async function saveStudentDetails() {
+        const saveBtn = document.getElementById('saveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        const student_mobile = document.getElementById('edit_student_mobile').value.trim();
+        const father_mobile = document.getElementById('edit_father_mobile').value.trim();
+
+        // Rule 6: Format validation (10 digits)
+        if (student_mobile && !isValidMobile(student_mobile)) {
+            alert("❌ Invalid Student Mobile. Please enter exactly 10 digits.");
+            saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; return;
+        }
+        if (father_mobile && !isValidMobile(father_mobile)) {
+            alert("❌ Invalid Father Mobile. Please enter exactly 10 digits.");
+            saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; return;
+        }
+
+        // Rule 1: Student mobile and father mobile must be different
+        if (student_mobile && father_mobile && student_mobile === father_mobile) {
+            alert("Invalid Data Detected\n\nStudent mobile number and Father mobile number cannot be the same.\n\nPlease enter the correct parent mobile number.");
+            saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; return;
+        }
+
+        // Rule 2 & 3: Uniqueness checks
+        if (student_mobile || father_mobile) {
+            const queries = [];
+            if (student_mobile) {
+                queries.push(sb.from('students').select('name').eq('student_mobile', student_mobile).neq('id', currentStudentId).limit(1));
+            }
+            if (father_mobile) {
+                queries.push(sb.from('students').select('name').eq('father_mobile', father_mobile).neq('id', currentStudentId).limit(1));
+            }
+
+            const results = await Promise.all(queries);
+            
+            if (student_mobile) {
+                const { data: sDup } = results[0];
+                if (sDup && sDup.length > 0) {
+                    alert("This mobile number is already registered to another student.");
+                    saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; return;
+                }
+            }
+            if (father_mobile) {
+                const fRes = student_mobile ? results[1] : results[0];
+                const { data: fDup } = fRes;
+                if (fDup && fDup.length > 0) {
+                    alert("This mobile number is already used as a father mobile for another student.\n\nEach student must have a unique parent mobile number.");
+                    saveBtn.disabled = false; saveBtn.textContent = 'Save Changes'; return;
+                }
+            }
+        }
+
+        const updates = {
+            student_mobile,
+            father_name: document.getElementById('edit_father_name').value.trim(),
+            father_occupation: document.getElementById('edit_father_occupation').value.trim(),
+            father_mobile,
+            mother_name: document.getElementById('edit_mother_name').value.trim(),
+            mother_occupation: document.getElementById('edit_mother_occupation').value.trim(),
+            mother_mobile: document.getElementById('edit_mother_mobile').value.trim(),
+        };
+
+        const { error } = await sb
+            .from('students')
+            .update(updates)
+            .eq('id', currentStudentId);
+
+        if (error) {
+            console.error('Update error:', error);
+            showToast('Failed to save changes', 'red');
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+            return;
+        }
+
+        showToast('Student details updated!', 'green');
+        await loadStudents(); // Refresh local data
+        
+        // Return to view mode with new data
+        isEditMode = false;
+        const updatedS = allStudents.find(st => st.id === currentStudentId);
+        if (updatedS) {
+            const btn = document.getElementById('editToggleBtn');
+            btn.textContent = 'Edit';
+            btn.classList.remove('cancel');
+            document.getElementById('viewActions').style.display = 'block';
+            document.getElementById('editActions').style.display = 'none';
+            renderModalContent(updatedS);
+        }
+        
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+    }
+
+    function showToast(msg, type) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className = `toast ${type} show`;
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function closeModal()          { document.getElementById('modalOverlay').classList.remove('open'); }
+    function handleOverlayClick(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+    /* ── Photo Zoom ── */
+    function openZoom(url, initials, color) {
+        const overlay = document.getElementById('photoZoomOverlay');
+        const img = document.getElementById('zoomedPhoto');
+        const content = overlay.querySelector('.zoom-content');
+
+        if (url) {
+            img.src = url;
+            img.style.display = 'block';
+            const placeholder = document.getElementById('zoomPlaceholder');
+            if (placeholder) placeholder.remove();
+        } else {
+            img.style.display = 'none';
+            let placeholder = document.getElementById('zoomPlaceholder');
+            if (!placeholder) {
+                placeholder = document.createElement('div');
+                placeholder.id = 'zoomPlaceholder';
+                placeholder.className = 'modal-photo';
+                placeholder.style.width = '100%';
+                placeholder.style.height = '100%';
+                placeholder.style.fontSize = '120px';
+                placeholder.style.cursor = 'default';
+                content.appendChild(placeholder);
+            }
+            placeholder.textContent = initials;
+            placeholder.style.background = `${color}18`;
+            placeholder.style.color = color;
+            placeholder.style.border = `4px solid #fff`;
+        }
+        overlay.classList.add('open');
+    }
+
+    function closeZoom() {
+        document.getElementById('photoZoomOverlay').classList.remove('open');
+    }
+</script>
+</body>
+</html>

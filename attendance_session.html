@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Attendance Session — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="notification_service.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.13);
+            --green: #12b76a;
+            --green-soft: rgba(18, 183, 106, 0.1);
+            --red: #e53e5a;
+            --red-soft: rgba(229, 62, 90, 0.09);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f5f8ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07)
+        }
+
+        html,
+        body {
+            height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            overflow-x: hidden
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(245, 248, 255, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 52px 20px 16px
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px
+        }
+
+        .back-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: transform 0.15s
+        }
+
+        .back-btn:active {
+            transform: scale(0.92)
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--tp);
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .header-info {
+            flex: 1
+        }
+
+        .subject-name-h {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.3px
+        }
+
+        .subject-meta {
+            font-size: 12.5px;
+            color: var(--ts);
+            margin-top: 2px
+        }
+
+        .session-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(18, 183, 106, 0.1);
+            border: 1px solid rgba(18, 183, 106, 0.25);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--green)
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulseDot 1.4s ease infinite
+        }
+
+        @keyframes pulseDot {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.3
+            }
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 8px
+        }
+
+        .summary-pill {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border-radius: 12px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+
+        .summary-pill:hover {
+            transform: translateY(-2px);
+            filter: brightness(0.95);
+        }
+
+        .summary-pill.active {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-width: 1.5px;
+        }
+
+        .summary-pill svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .pill-total {
+            background: var(--blue-soft);
+            border-color: var(--blue-border);
+            color: var(--blue)
+        }
+
+        .pill-total.active {
+            border-color: var(--blue);
+            background: rgba(26, 79, 219, 0.12);
+        }
+
+        .pill-total svg {
+            stroke: var(--blue)
+        }
+
+        .pill-present {
+            background: var(--green-soft);
+            border-color: rgba(18, 183, 106, 0.2);
+            color: var(--green)
+        }
+
+        .pill-present.active {
+            border-color: var(--green);
+            background: rgba(18, 183, 106, 0.15);
+        }
+
+        .pill-present svg {
+            stroke: var(--green)
+        }
+
+        .pill-absent {
+            background: var(--red-soft);
+            border-color: rgba(229, 62, 90, 0.18);
+            color: var(--red)
+        }
+
+        .pill-absent.active {
+            border-color: var(--red);
+            background: rgba(229, 62, 90, 0.14);
+        }
+
+        .pill-absent svg {
+            stroke: var(--red)
+        }
+
+        .search-wrap {
+            position: relative;
+            margin: 14px 16px 8px
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8;
+            pointer-events: none
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 11px 14px 11px 40px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            background: var(--card);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            color: var(--tp);
+            outline: none;
+            transition: border-color .18s, box-shadow .18s
+        }
+
+        .search-input::placeholder {
+            color: #b8cce0
+        }
+
+        .search-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(26, 79, 219, 0.1)
+        }
+
+        .list-wrap {
+            padding: 0 16px 100px
+        }
+
+        .list-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--tm);
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            padding: 14px 4px 8px
+        }
+
+        .student-row {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: transform 0.15s, box-shadow 0.15s;
+            animation: rowIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+            box-shadow: 0 2px 10px rgba(26, 79, 219, 0.05)
+        }
+
+        .student-row:active {
+            transform: scale(0.98);
+            box-shadow: none
+        }
+
+        @keyframes rowIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .stu-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            position: relative;
+            overflow: hidden
+        }
+
+        .stu-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .stu-roll {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--tm);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 2px
+        }
+
+        .stu-name {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--tp);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .status-badge {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 999px;
+            padding: 5px 12px;
+            font-size: 11.5px;
+            font-weight: 700
+        }
+
+        .status-badge svg {
+            width: 12px;
+            height: 12px;
+            fill: none;
+            stroke-width: 2.5
+        }
+
+        .badge-pending {
+            background: rgba(26, 79, 219, 0.07);
+            border: 1px solid var(--blue-border);
+            color: var(--blue)
+        }
+
+        .badge-pending svg {
+            stroke: var(--blue)
+        }
+
+        .badge-present {
+            background: var(--green-soft);
+            border: 1px solid rgba(18, 183, 106, 0.25);
+            color: var(--green)
+        }
+
+        .badge-present svg {
+            stroke: var(--green)
+        }
+
+        .badge-absent {
+            background: var(--red-soft);
+            border: 1px solid rgba(229, 62, 90, 0.2);
+            color: var(--red)
+        }
+
+        .badge-absent svg {
+            stroke: var(--red)
+        }
+
+        .stu-chevron svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 2
+        }
+
+        .fab-wrap {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 80
+        }
+
+        .fab-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 32px;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #1a4fdb, #2a62f0);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14.5px;
+            font-weight: 700;
+            box-shadow: 0 8px 28px rgba(26, 79, 219, 0.38);
+            transition: transform 0.18s, box-shadow 0.18s;
+            white-space: nowrap
+        }
+
+        .fab-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .fab-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 36px rgba(26, 79, 219, 0.45)
+        }
+
+        .fab-btn.edit-mode {
+            background: linear-gradient(135deg, #4a6080, #5c7496);
+            box-shadow: 0 8px 28px rgba(74, 96, 128, 0.3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .student-row.locked {
+            opacity: 0.85;
+            cursor: default;
+        }
+
+        .student-row.locked:active {
+            transform: none;
+        }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            padding: 8px 18px;
+            z-index: 999;
+            font-size: 12.5px;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            white-space: nowrap
+        }
+
+        .toast.success {
+            background: rgba(18, 183, 106, 0.15);
+            border: 1px solid rgba(18, 183, 106, 0.4);
+            color: var(--green)
+        }
+
+        .toast.show {
+            opacity: 1
+        }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #e8f0ff 25%, #f3f8ff 50%, #e8f0ff 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 18px;
+            height: 72px;
+            margin-bottom: 10px
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+
+        /* Mode Switcher */
+        .mode-switcher {
+            display: flex;
+            background: rgba(26, 79, 219, 0.05);
+            padding: 4px;
+            border-radius: 12px;
+            margin: 0 16px 12px;
+            border: 1px solid var(--border);
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--tm);
+            cursor: pointer;
+            border-radius: 9px;
+            transition: all 0.2s;
+        }
+
+        .mode-btn.active {
+            background: var(--card);
+            color: var(--blue);
+            box-shadow: 0 2px 8px rgba(26, 79, 219, 0.1);
+        }
+
+        /* Manual Mode Controls */
+        .manual-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .m-btn {
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+
+        .m-present {
+            background: var(--green-soft);
+            color: var(--green);
+            border-color: rgba(18, 183, 106, 0.2);
+        }
+
+        .m-absent {
+            background: var(--red-soft);
+            color: var(--red);
+            border-color: rgba(229, 62, 90, 0.2);
+        }
+
+        .m-edit {
+            background: rgba(26, 79, 219, 0.05);
+            color: var(--tm);
+            border-color: var(--border);
+        }
+
+        .m-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="header-row">
+            <div class="back-btn" onclick="history.back()"><svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg></div>
+            <div class="header-info">
+                <div class="subject-name-h" id="subjectTitle">Loading…</div>
+                <div class="subject-meta" id="subjectMeta">—</div>
+            </div>
+            <div class="session-badge"><span class="live-dot"></span>Live</div>
+        </div>
+        <div class="summary-bar">
+            <div class="summary-pill pill-total active" id="pillAll" onclick="setFilter('all')"><svg viewBox="0 0 24 24">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                </svg><span id="totalCount">— Total</span></div>
+            <div class="summary-pill pill-present" id="pillPresent" onclick="setFilter('present')"><svg viewBox="0 0 24 24">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <path d="M22 4L12 14.01l-3-3" />
+                </svg><span id="presentCount">0 Present</span></div>
+            <div class="summary-pill pill-absent" id="pillAbsent" onclick="setFilter('absent')"><svg viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M15 9l-6 6M9 9l6 6" />
+                </svg><span id="absentCount">0 Absent</span></div>
+        </div>
+    </div>
+
+    <div class="mode-switcher">
+        <button class="mode-btn active" id="faceModeBtn" onclick="setAttendanceMode('face')">Face Mode</button>
+        <button class="mode-btn" id="manualModeBtn" onclick="setAttendanceMode('manual')">Manual Mode</button>
+    </div>
+
+    <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" />
+            <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <input class="search-input" id="searchInput" type="text" placeholder="Search by name or roll no…"
+            oninput="filterStudents()" />
+    </div>
+
+    <div class="list-wrap">
+        <div class="list-section-label">Students</div>
+        <div id="studentList">
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+            <div class="skeleton"></div>
+        </div>
+    </div>
+
+    <div class="fab-wrap">
+        <button class="fab-btn" id="submitBtn" onclick="submitAll()">
+            <svg viewBox="0 0 24 24">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            </svg>
+            Submit Attendance
+        </button>
+        <button class="fab-btn edit-mode hidden" id="editBtn" onclick="unlockAttendance()">
+            <svg viewBox="0 0 24 24">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            Edit Attendance
+        </button>
+    </div>
+
+    <div class="toast success" id="toast"></div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const subjectId = params.get('subject_id');
+        const subjectName = params.get('name') || 'Subject';
+        const subjectYear = params.get('year');
+        const subjectSem = params.get('semester');
+        const subjectBranch = params.get('branch');
+        const startPeriod = parseInt(params.get('start_period')) || null;
+        const endPeriod = parseInt(params.get('end_period')) || null;
+
+        let allStudents = [];
+        let attendanceMap = {}; // student_id → { status }
+        let currentUser = null;
+        let attendanceMode = 'face';
+        let periodLabel = 'Session';
+        let currentFilter = 'all'; // Filter state
+        let isLocked = false; // Submission state
+
+        const avatarColors = ['#1a4fdb', '#12b76a', '#f59e0b', '#8b5cf6', '#e53e5a', '#0ea5e9'];
+
+        function yearLabel(y) {
+            return y === '1' ? '1st Year' : y === '2' ? '2nd Year' : y === '3' ? '3rd Year' : `${y}th Year`;
+        }
+
+        window.addEventListener('pageshow', async (event) => {
+            const { session, role } = await protectRoute(['teacher', 'admin']);
+            if (!session) return;
+            currentUser = session.user;
+
+            periodLabel = (startPeriod && endPeriod)
+                ? (startPeriod === endPeriod ? `P${startPeriod}` : `P${startPeriod}–P${endPeriod}`)
+                : 'Session';
+
+            document.getElementById('subjectTitle').textContent = subjectName;
+            document.getElementById('subjectMeta').textContent =
+                `${yearLabel(subjectYear)} · Sem ${subjectSem} · ${subjectBranch} · ${periodLabel}`;
+
+            // Refresh data every time we show the page
+            await Promise.all([loadStudents(), loadTodayAttendance()]);
+            
+            // Step 2 — Check for updates from face recognition
+            syncFromSessionStorage();
+            
+            renderList(allStudents);
+        });
+
+        function syncFromSessionStorage() {
+            // Pick up manual updates sent from teacher_face_capture.html via sessionStorage
+            const prefix = 'attendance_update_';
+            let hasUpdates = false;
+            
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key.startsWith(prefix)) {
+                    const studentId = key.replace(prefix, '');
+                    const status = sessionStorage.getItem(key);
+                    attendanceMap[studentId] = status;
+                    sessionStorage.removeItem(key); // Clear it once processed
+                    hasUpdates = true;
+                }
+            }
+            if (hasUpdates) {
+                if (window.feedback) window.feedback.notify();
+            }
+        }
+
+        async function loadStudents() {
+            const { data, error } = await sb.from('students')
+                .select('id, uid, name, roll_number, face_image_url, student_mobile, profile_completed')
+                .eq('year', subjectYear)
+                .eq('semester', subjectSem)
+                .eq('branch', subjectBranch)
+                .order('roll_number');
+
+            if (error) { console.error('students:', error); return; }
+            allStudents = (data || []).map(s => ({ ...s, status: 'pending' }));
+            document.getElementById('totalCount').textContent = `${allStudents.length} Total`;
+        }
+
+        async function loadTodayAttendance() {
+            if (!subjectId) return;
+            const today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }).split(',')[0];
+            let query = sb.from('attendance')
+                .select('student_id, status')
+                .eq('subject_id', subjectId)
+                .eq('date', today);
+
+            if (startPeriod && endPeriod) {
+                const periods = [];
+                for (let p = startPeriod; p <= endPeriod; p++) periods.push(`P${p}`);
+                
+                // Step 1 — Also include the consolidated period string (e.g. "P1-P2")
+                const consolidated = startPeriod === endPeriod ? (`P${startPeriod}`) : (`P${startPeriod}-P${endPeriod}`);
+                periods.push(consolidated);
+                
+                query = query.in('period', periods);
+            }
+
+            const { data, error } = await query;
+
+            if (error) { console.error('attendance:', error); return; }
+            attendanceMap = {};
+            const rows = data || [];
+            rows.forEach(r => { attendanceMap[r.student_id] = r.status; });
+            
+            // If attendance already exists, lock the UI
+            if (rows.length > 0) {
+                isLocked = true;
+                updateLockUI();
+            }
+        }
+
+        function updateLockUI() {
+            const submitBtn = document.getElementById('submitBtn');
+            const editBtn = document.getElementById('editBtn');
+            if (isLocked) {
+                submitBtn.classList.add('hidden');
+                editBtn.classList.remove('hidden');
+            } else {
+                submitBtn.classList.remove('hidden');
+                editBtn.classList.add('hidden');
+            }
+            renderList(allStudents);
+        }
+
+        function unlockAttendance() {
+            isLocked = false;
+            updateLockUI();
+            showToast('Attendance list unlocked for editing.');
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.summary-pill').forEach(p => p.classList.remove('active'));
+            if (filter === 'all') document.getElementById('pillAll').classList.add('active');
+            if (filter === 'present') document.getElementById('pillPresent').classList.add('active');
+            if (filter === 'absent') document.getElementById('pillAbsent').classList.add('active');
+            renderList(allStudents);
+        }
+
+        function getStatusBadge(status) {
+            if (status === 'present') return `<div class="status-badge badge-present"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>Present</div>`;
+            if (status === 'absent') return `<div class="status-badge badge-absent"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>Absent</div>`;
+            return `<div class="status-badge badge-pending"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>Tap</div>`;
+        }
+
+        function renderList(list) {
+            const container = document.getElementById('studentList');
+            
+            // Apply filtering based on currentFilter
+            let filtered = list;
+            if (currentFilter === 'present') {
+                filtered = list.filter(s => (attendanceMap[s.id] || s.status) === 'present');
+            } else if (currentFilter === 'absent') {
+                filtered = list.filter(s => (attendanceMap[s.id] || s.status) === 'absent');
+            }
+
+            if (!filtered.length) {
+                const msg = currentFilter === 'all' ? 'No students found' : `No students marked as ${currentFilter}`;
+                container.innerHTML = `<p style="text-align:center;color:var(--tm);padding:40px;font-size:13px">${msg}</p>`;
+                updateCounts(); return;
+            }
+
+            container.innerHTML = filtered.map((s, i) => {
+                // Merge attendance status
+                const status = attendanceMap[s.id] || s.status;
+                const initials = escapeHTML(s.name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase());
+                const color = avatarColors[Math.abs(s.id.charCodeAt(0) - 97) % avatarColors.length];
+                const avatarStyle = status === 'present'
+                    ? `background:rgba(18,183,106,0.12);color:#12b76a`
+                    : status === 'absent'
+                        ? `background:rgba(229,62,90,0.1);color:#e53e5a`
+                        : `background:${color}18;color:${color}`;
+                const avatarContent = status === 'present'
+                    ? `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#12b76a" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>`
+                    : status === 'absent'
+                        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53e5a" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>`
+                        : initials;
+
+                const controls = attendanceMode === 'face'
+                    ? `${getStatusBadge(status)}
+                       <div class="stu-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></div>`
+                    : `<div class="manual-btns" onclick="event.stopPropagation()">
+                        ${status === 'pending'
+                        ? `<button class="m-btn m-present" ${isLocked ? 'disabled' : ''} onclick="updateManualAttendance('${s.id}','present')">✔ Present</button>
+                               <button class="m-btn m-absent" ${isLocked ? 'disabled' : ''} onclick="updateManualAttendance('${s.id}','absent')">✖ Absent</button>`
+                        : `<div class="status-badge badge-${status}">
+                                 ${status === 'present' ? '✔' : '✖'} ${status.toUpperCase()}
+                               </div>
+                               <button class="m-btn m-edit" ${isLocked ? 'disabled' : ''} onclick="editAttendance('${s.id}')">✎ Edit</button>`
+                    }
+                       </div>`;
+
+                const clickAction = isLocked 
+                    ? '' 
+                    : (attendanceMode === 'face' ? `openFaceCapture('${s.id}','${encodeURIComponent(s.name)}','${s.roll_number}')` : '');
+
+                return `
+        <div class="student-row ${isLocked ? 'locked' : ''}" id="row-${s.id}" onclick="${clickAction}" style="animation-delay:${i * 0.03}s">
+          <div class="stu-avatar" style="${avatarStyle}">${avatarContent}</div>
+          <div class="stu-info">
+            ${s.student_mobile ? `<div class="stu-roll">${escapeHTML(s.roll_number)}</div>` : ''}
+            <div class="stu-name">${escapeHTML(s.name)}</div>
+          </div>
+          ${controls}
+        </div>`;
+            }).join('');
+
+            updateCounts();
+        }
+
+        function updateCounts() {
+            const present = allStudents.filter(s => (attendanceMap[s.id] || s.status) === 'present').length;
+            const absent = allStudents.filter(s => (attendanceMap[s.id] || s.status) === 'absent').length;
+            document.getElementById('presentCount').textContent = `${present} Present`;
+            document.getElementById('absentCount').textContent = `${absent} Absent`;
+        }
+
+        function setAttendanceMode(mode) {
+            attendanceMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(mode + 'ModeBtn').classList.add('active');
+            renderList(allStudents);
+        }
+
+        function updateManualAttendance(studentId, status) {
+            if (isLocked) return;
+            attendanceMap[studentId] = status;
+            renderList(allStudents);
+            if (window.feedback) window.feedback.notify();
+        }
+
+        function editAttendance(studentId) {
+            if (isLocked) return;
+            delete attendanceMap[studentId];
+            renderList(allStudents);
+        }
+
+        function filterStudents() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            renderList(allStudents.filter(s =>
+                s.name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
+            ));
+        }
+
+        function openFaceCapture(studentId, name, roll) {
+            const sp = startPeriod ? `&start_period=${startPeriod}` : '';
+            const ep = endPeriod ? `&end_period=${endPeriod}` : '';
+            window.location.href =
+                `teacher_face_capture.html?student_id=${studentId}&name=${name}&roll=${encodeURIComponent(roll)}&subject_id=${subjectId || ''}&subject_name=${encodeURIComponent(subjectName)}${sp}${ep}`;
+        }
+
+        async function submitAll() {
+            const today = new Date().toLocaleString('en-CA', { timeZone: 'Asia/Kolkata' }).split(',')[0];
+            if (!subjectId) return;
+
+            const entries = [];
+            
+            const stPeriod = parseInt(startPeriod) || 1;
+            const enPeriod = parseInt(endPeriod) || stPeriod;
+
+            allStudents.forEach(s => {
+                const status = attendanceMap[s.id] || 'absent';
+                // Create a separate entry for each period
+                for (let p = stPeriod; p <= enPeriod; p++) {
+                    entries.push({
+                        student_id: s.id,
+                        subject_id: subjectId,
+                        date: today,
+                        status: status,
+                        marked_by: currentUser.id,
+                        period: 'P' + p,
+                        period_count: 1
+                    });
+                }
+            });
+
+            if (entries.length > 0) {
+                // Use onConflict including 'period' to allow multiple periods for same student/subject/date
+                const { error } = await sb.from('attendance').upsert(entries, { onConflict: 'student_id,subject_id,date,period' });
+                if (error) {
+                    console.error('Submit error:', error);
+                    showToast('Submission failed: ' + error.message, true);
+                    return;
+                }
+
+                isLocked = true;
+                updateLockUI();
+                showToast('Attendance submitted successfully!');
+
+                // ── Trigger Notifications to All Students ──
+                const notifPromises = allStudents.map(s => {
+                    const status = attendanceMap[s.id] || 'absent';
+                    if (!s.uid) return Promise.resolve();
+
+                    return NotificationService.send({
+                        title: `Attendance: ${status === 'present' ? 'Present ✅' : 'Absent ❌'}`,
+                        message: `Attendance for ${subjectName} (${periodLabel}) has been submitted. Status: ${status.toUpperCase()}`,
+                        target_user_id: s.uid,
+                        type: status === 'present' ? 'success' : 'error',
+                        action_url: 'dashboard.html'
+                    }).catch(err => console.error(`Failed to notify student ${s.name}:`, err));
+                });
+
+                // Run notifications in background (don't block UI too long)
+                Promise.all(notifPromises);
+            }
+
+            showToast('✓ Attendance submitted!');
+            setTimeout(() => history.back(), 1800);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2400);
+        }
+    </script>
+</body>
+
+</html>

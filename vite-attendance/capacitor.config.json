@@ -1,0 +1,13 @@
+{
+  "appId": "com.svpcet.attendance",
+  "appName": "SVPP ATTENDANCE (FACE RECOGNITION)",
+  "webDir": "dist",
+  "server": {
+    "url": "https://svpctai.vercel.app",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#ffffff"
+  }
+}

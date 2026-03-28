@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Student Approvals — Verifier Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="notification_service.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script src="push_notifications.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success: #10b981;
+            --success-hover: #059669;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .top-bar {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+
+        .brand span {
+            color: var(--primary);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-outline {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: var(--success-hover);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        /* ── Notification Bell ── */
+        .notif-bell-wrapper {
+            position: relative;
+            cursor: pointer;
+            padding: 9px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s cubic-bezier(.175, .885, .32, 1.275);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .notif-bell-wrapper:hover {
+            background: #f1f5f9;
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .notif-bell-wrapper svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--text-main);
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 3px 10px rgba(229, 62, 90, .35);
+            animation: badgePop .4s cubic-bezier(.175, .885, .32, 1.275) both;
+        }
+
+        @keyframes badgePop {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 32px auto;
+            padding: 0 24px;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 24px;
+        }
+
+        .header-left h1 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .header-left p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        .breadcrumb {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .breadcrumb span.active {
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        .breadcrumb span.active:hover {
+            text-decoration: underline;
+        }
+
+        .breadcrumb svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Folders/Cards Grid for Drilldown */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .nav-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .nav-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .nav-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .badge {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        /* Student Grid */
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .student-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            transition: all 0.3s;
+        }
+
+        .student-card:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .student-header {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .student-photo {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #e2e8f0;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            cursor: zoom-in;
+        }
+
+        .student-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .student-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .student-roll {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .student-details {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: #f1f5f9;
+            padding: 6px 10px;
+            border-radius: 6px;
+        }
+
+        .student-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .student-actions .btn {
+            flex: 1;
+            justify-content: center;
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            stroke: #cbd5e1;
+            margin-bottom: 16px;
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Notification List Styling */
+        .tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            background: #f1f5f9;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            background: #eef2ff;
+        }
+
+        .notification-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* ─── Compact Filter Bar ─── */
+        .filter-bar {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .filter-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .filter-item.full {
+            flex: 1 1 100%;
+        }
+
+        .filter-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .filter-input,
+        .filter-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            background: #f8fafc;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .filter-input:focus,
+        .filter-select:focus {
+            border-color: var(--primary);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .filter-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 16px;
+            padding-right: 30px;
+        }
+
+        /* STRICT CARD LAYOUT */
+        .notif-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+            transition: all 0.2s;
+            overflow: hidden;
+        }
+
+        .notif-item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Fixed Profile Image */
+        .notif-photo {
+            flex-shrink: 0;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid var(--border);
+            margin-right: 12px;
+            cursor: zoom-in;
+        }
+
+        /* Center Section: Info */
+        .notif-content {
+            flex: 1;
+            min-width: 0;
+            /* CRITICAL: Allows flex children to truncate text */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .notif-name {
+            font-weight: 700;
+            color: var(--text-main);
+            font-size: 1.05rem;
+            margin-bottom: 2px;
+            /* Truncate long names */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notif-roll {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.9em;
+            margin-left: 6px;
+        }
+
+        .notif-details {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notif-time {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        /* Right Section: Status + Edit */
+        .notif-actions {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            /* Stack badge and edit vertically */
+            align-items: flex-end;
+            /* Align them to the right wall */
+            justify-content: center;
+            gap: 8px;
+            /* strict gap between stacked items */
+            margin-left: 12px;
+        }
+
+        /* Pending Action Row (Accept/Reject side by side) */
+        .action-row-pending {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+        }
+
+        /* Clean Pill Status Badges */
+        .badge-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            /* strict pill shape */
+            font-size: 12px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            /* NO text breaking */
+        }
+
+        .badge-approved {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .badge-rejected {
+            background: #ffe5e5;
+            color: #d32f2f;
+            border: 1px solid #fecaca;
+        }
+
+        .badge-pending {
+            background: #fef9c3;
+            color: #854d0e;
+            border: 1px solid #fef08a;
+        }
+
+        /* Small rounded edit button */
+        .btn-edit {
+            background: #f1f5f9;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 20px;
+        }
+
+        .btn-edit:hover {
+            background: #e2e8f0;
+        }
+
+        /* Mobile Responsive Stack Fix */
+        @media (max-width: 600px) {
+            .notif-item {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 16px;
+            }
+
+            .notif-photo-wrapper {
+                display: flex;
+                flex-direction: row;
+                width: 100%;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+
+            .notif-photo {
+                margin-right: 12px;
+            }
+
+            .notif-content {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .notif-actions {
+                width: 100%;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-end;
+                margin-left: 0;
+            }
+        }
+
+        /* ─── Auto Approver ─── */
+        .btn-auto {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-auto:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-auto.running {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+
+        .auto-panel {
+            display: none;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            animation: slideDown 0.25s ease-out;
+        }
+
+        .auto-panel.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auto-panel-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .auto-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            display: inline-block;
+            transition: background 0.3s;
+        }
+
+        .auto-status-dot.running {
+            background: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.08);
+            }
+        }
+
+        .auto-form-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+
+        .auto-input {
+            flex: 1;
+            min-width: 180px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .auto-input:focus {
+            border-color: #6366f1;
+        }
+
+        .auto-info {
+            font-size: 0.8rem;
+            color: #64748b;
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 8px 12px;
+            border-left: 3px solid #6366f1;
+        }
+
+        .auto-timer {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #64748b;
+            margin-top: 10px;
+        }
+
+        .auto-timer .status-label {
+            font-weight: 800;
+            color: #64748b;
+        }
+
+        .auto-timer .status-label.running {
+            color: #10b981;
+        }
+
+        .auto-tab {
+            color: #6366f1;
+        }
+
+        .auto-tab.active {
+            color: #6366f1;
+            background: #eef2ff;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        /* ── Bottom Navigation ── */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #fff;
+            border-top: 1px solid #e2e8f0;
+            padding: 8px 0 10px;
+            z-index: 200;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+        }
+
+        .bottom-nav button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            padding: 4px 12px;
+            border-radius: 10px;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .bottom-nav button .nav-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .bottom-nav button.active {
+            color: #2563eb;
+        }
+
+        .bottom-nav button.active .nav-icon {
+            transform: scale(1.1);
+        }
+
+        .bottom-nav button .auto-dot {
+            position: absolute;
+            top: 2px;
+            right: 6px;
+            width: 7px;
+            height: 7px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        .bottom-nav button.auto-running .auto-dot {
+            display: block;
+        }
+
+        /* ── Content sections ── */
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .container {
+            padding-bottom: 80px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- BACK BUTTON -->
+
+
+    <div class="top-bar">
+        <div class="brand">SVPP <span>Verifier</span></div>
+        <button class="btn btn-outline" onclick="logout()">Logout</button>
+    </div>
+
+    <div class="container">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 style="display: flex; align-items: center;">Approvals
+                    <span id="pending-count-badge" class="badge"
+                        style="display: none; background: #ef4444; color: white; border-radius: 999px; padding: 2px 10px; font-size: 1rem; margin-left: 12px; font-weight: 700;">0</span>
+                </h1>
+                <p>Manage pending, approved, and rejected requests.</p>
+            </div>
+        </div>
+
+        <!-- CLEAN REDESIGNED FILTERS -->
+        <div class="filter-bar">
+            <!-- Row 1: Search -->
+            <div class="filter-row">
+                <div class="filter-item full">
+                    <label class="filter-label">Search Roll Number</label>
+                    <input type="text" id="filterSearch" class="filter-input" placeholder="Enter roll number..."
+                        oninput="applyFilters()">
+                </div>
+            </div>
+
+            <!-- Row 2: Year & Semester -->
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label class="filter-label">Year</label>
+                    <select id="filterYear" class="filter-select" onchange="applyFilters()">
+                        <option value="">All Years</option>
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3">3rd Year</option>
+                        <option value="4">4th Year</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Semester</label>
+                    <select id="filterSem" class="filter-select" onchange="applyFilters()">
+                        <option value="">All Semesters</option>
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Row 3: Branch & Section -->
+            <div class="filter-row">
+                <div class="filter-item">
+                    <label class="filter-label">Branch</label>
+                    <select id="filterBranch" class="filter-select" onchange="applyFilters()">
+                        <option value="">All Branches</option>
+                        <option value="AI">AI</option>
+                        <option value="CSE">CSE</option>
+                        <option value="ECE">ECE</option>
+                        <option value="EEE">EEE</option>
+                        <option value="MECH">MECH</option>
+                        <option value="CIVIL">CIVIL</option>
+                    </select>
+                </div>
+                <div class="filter-item">
+                    <label class="filter-label">Section</label>
+                    <select id="filterSection" class="filter-select" onchange="applyFilters()">
+                        <option value="">All Sections</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto Approver Popup -->
+        <div id="autoPopup"
+            style="display:none; position:fixed; top:80px; left:50%; transform:translateX(-50%); background:#22c55e; color:#fff; border-radius:12px; padding:12px 24px; font-size:0.95rem; font-weight:700; box-shadow:0 8px 24px rgba(34,197,94,0.35); z-index:9999; align-items:center; gap:8px; animation:fadeInDown 0.3s ease-out;">
+            <span id="autoPopupIcon" style="font-size:1.2rem;">✔</span>
+            <span id="autoPopupMsg">Auto Approver Started</span>
+        </div>
+
+        <!-- Pending Section -->
+        <div id="pending-section" class="section active">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="notif-bell-wrapper" onclick="window.location.href='notifications.html'">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <div id="notif-badge" class="notif-badge"></div>
+                </div>
+                <button class="btn btn-outline" onclick="handleLogout()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+            <div id="mainContent"></div>
+        </div>
+
+        <!-- Approved Section -->
+        <div id="approved-section" class="section">
+            <div id="approvedContent"></div>
+        </div>
+
+        <!-- Rejected Section -->
+        <div id="rejected-section" class="section">
+            <div id="rejectedContent"></div>
+        </div>
+
+        <!-- Auto Approver Section -->
+        <div id="auto-section" class="section">
+            <div class="auto-panel show" id="autoApproverPanel">
+                <div class="auto-panel-title">
+                    <span class="auto-status-dot" id="autoStatusDot"></span>
+                    Auto Approver
+                    <span class="auto-timer">Status: <span class="status-label"
+                            id="autoStatusLabel">Stopped</span></span>
+                </div>
+                <div class="auto-form-row">
+                    <input class="auto-input" id="rollPrefixInput" type="text" placeholder="Roll Prefix e.g. 25G01A43"
+                        maxlength="20">
+                    <button class="btn btn-success" id="startAutoBtn" onclick="startAutoApprover()">▶ Start</button>
+                    <button class="btn btn-danger" id="stopAutoBtn" onclick="stopAutoApprover()" disabled>■
+                        Stop</button>
+                </div>
+                <div class="auto-info" id="autoInfoBox">
+                    <div>Pattern: <strong id="prefixPreview">—</strong><span style="color:#94a3b8;"> (prefix + 2
+                            alphanumeric chars)</span></div>
+                    <div style="margin-top:6px;">Matches: <strong id="prefixExamples">—</strong></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button id="nav-pending" class="active" onclick="switchTab('pending')">
+            <span class="nav-icon">⏳</span>
+            <span>Pending</span>
+            <span id="pending-count-badge"
+                style="display:none; position:absolute; top:0; right:4px; background:#ef4444; color:#fff; border-radius:999px; padding:1px 6px; font-size:10px; font-weight:800;">0</span>
+        </button>
+        <button id="nav-approved" onclick="switchTab('approved')">
+            <span class="nav-icon">✅</span>
+            <span>Approved</span>
+        </button>
+        <button id="nav-rejected" onclick="switchTab('rejected')">
+            <span class="nav-icon">❌</span>
+            <span>Rejected</span>
+        </button>
+        <button id="nav-auto" onclick="switchTab('auto')">
+            <span class="nav-icon">⚡</span>
+            <span>Auto</span>
+            <span id="autoRunningDot" class="auto-dot"></span>
+        </button>
+    </nav>
+
+    <script>
+
+        // View State
+        let session = null;
+        let allRequests = [];
+        let currentTab = 'pending'; // 'pending', 'approved', 'rejected'
+
+        async function updateNotificationBadge() {
+            const pendingCount = allRequests.filter(r => r._tab === 'pending').length;
+            const badge = document.getElementById('pending-count-badge');
+            if (!badge) return;
+            badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+            badge.innerText = pendingCount;
+        }
+
+        window.addEventListener('load', async () => {
+            const { session: s, role: userRole } = await protectRoute(['verifier', 'admin']);
+            if (!s) return;
+            session = s;
+
+            // Restore tab memory
+            const savedTab = localStorage.getItem('verifier_active_tab');
+            if (savedTab && ['pending', 'approved', 'rejected', 'auto'].includes(savedTab)) {
+                switchTab(savedTab);
+            } else {
+                loadRequests();
+            }
+
+            setupRealtimeListener();
+            initAutoApprover();
+        });
+
+
+
+        async function logout() {
+            sessionStorage.removeItem("profileCheckComplete");
+            await sb.auth.signOut();
+            window.location.replace('login.html');
+        }
+
+        function switchTab(tabName) {
+            currentTab = tabName;
+            localStorage.setItem('verifier_active_tab', tabName);
+            // Update bottom nav active state
+            document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('active'));
+            const navBtn = document.getElementById('nav-' + tabName);
+            if (navBtn) navBtn.classList.add('active');
+            // Show / hide sections
+            ['pending', 'approved', 'rejected', 'auto'].forEach(t => {
+                const sec = document.getElementById(t + '-section');
+                if (sec) sec.classList.toggle('active', t === tabName);
+            });
+            // Fetch fresh data for each tab
+            if (tabName === 'pending') loadPendingStudents();
+            else if (tabName === 'approved') loadApprovedStudents();
+            else if (tabName === 'rejected') loadRejectedStudents();
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return 'Just now';
+            const d = new Date(isoString);
+            return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function loadPendingStudents() {
+            const container = document.getElementById('mainContent');
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'flex';
+
+            const { data, error } = await sb
+                .from('student_requests')
+                .select('*')
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false });
+
+            if (loading) loading.style.display = 'none';
+
+            if (error) {
+                console.error('Pending fetch error:', error);
+                container.innerHTML = `<div class="empty-state">Error: ${error.message}</div>`;
+                return;
+            }
+
+            // Tag each as 'pending' so renderSection can filter
+            const tagged = (data || []).map(r => ({ ...r, _tab: 'pending' }));
+            allRequests = allRequests.filter(r => r._tab !== 'pending').concat(tagged);
+
+            // Update badge with real count
+            const badge = document.getElementById('pending-count-badge');
+            if (badge) {
+                badge.style.display = tagged.length > 0 ? 'inline-block' : 'none';
+                badge.innerText = tagged.length;
+            }
+
+            renderPendingSection();
+        }
+
+        // --- FILTERING ENGINE ---
+        function getFilteredData(data) {
+            const search = document.getElementById('filterSearch').value.toLowerCase().trim();
+            const year = document.getElementById('filterYear').value;
+            const sem = document.getElementById('filterSem').value;
+            const branch = document.getElementById('filterBranch').value;
+            const section = document.getElementById('filterSection').value;
+
+            return data.filter(req => {
+                const roll = (req.roll_number || '').toLowerCase();
+                const rYear = (req.year || '').toString();
+                const rSem = (req.semester || '').toString();
+                const rBranch = (req.department || req.branch || '');
+                const rSection = (req.section || 'None');
+
+                const matchesSearch = !search || roll.includes(search);
+                const matchesYear = !year || rYear === year;
+                const matchesSem = !sem || rSem === sem;
+                const matchesBranch = !branch || rBranch === branch;
+                const matchesSection = !section || (section === 'None' ? (rSection === 'None' || !req.section) : rSection === section);
+
+                return matchesSearch && matchesYear && matchesSem && matchesBranch && matchesSection;
+            });
+        }
+
+        function applyFilters() {
+            // Re-render the current visible sections
+            renderPendingSection();
+            renderApprovedSection();
+            renderRejectedSection();
+        }
+
+        function renderPendingSection() {
+            const container = document.getElementById('mainContent');
+            const pending = allRequests.filter(r => r._tab === 'pending');
+            const filtered = getFilteredData(pending);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:8px;">🔍</div><p>${pending.length > 0 ? 'No students found for selected filters' : 'No pending requests.'}</p></div>`;
+                return;
+            }
+
+            let html = '<div class="notification-list">';
+            filtered.forEach(req => {
+                const photoUrl = req.face_image_url || req.photo_url || '';
+                const photoHtml = photoUrl
+                    ? `<img src="${photoUrl}" alt="Photo" class="notif-photo" onclick="window.open('${photoUrl}', '_blank')" style="cursor:pointer;">`
+                    : `<div style="width:50px;height:50px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">👤</div>`;
+                const nameEsc = escapeHTML(req.name || 'Unknown');
+                const rollEsc = escapeHTML(req.roll_number || '');
+                const emailEsc = escapeHTML(req.email || formatTime(req.created_at));
+                const yearEsc = req.year ? escapeHTML(req.year.toString()) + ' Year' : '';
+                const semEsc = req.semester ? 'Sem ' + escapeHTML(req.semester.toString()) : '';
+                const deptEsc = escapeHTML(req.department || req.branch || '');
+                const secEsc = req.section ? 'Sec ' + escapeHTML(req.section) : '';
+                const detail = [yearEsc, semEsc, deptEsc, secEsc].filter(Boolean).join(' • ');
+
+                html += `
+                    <div class="notif-item" id="req-${req.id}">
+                        <div class="notif-photo-wrapper">
+                            ${photoHtml}
+                            <div class="notif-content">
+                                <div class="notif-name">${nameEsc} <span class="notif-roll">${rollEsc}</span></div>
+                                <div class="notif-details">${detail}</div>
+                                <div class="notif-time">${emailEsc}</div>
+                            </div>
+                        </div>
+                        <div class="notif-actions" id="actions-${req.id}">
+                            <div class="action-row-pending">
+                                <button class="btn btn-success" onclick="processRequest('${req.id}', 'approved')" id="btn-acc-${req.id}">Accept</button>
+                                <button class="btn btn-danger" onclick="processRequest('${req.id}', 'rejected')" id="btn-rej-${req.id}">Reject</button>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Approved tab = ALL records in `students` table (no status column)
+        async function loadApprovedStudents() {
+            const container = document.getElementById('approvedContent');
+
+            const { data, error } = await sb
+                .from('students')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Approved fetch error:', error);
+                container.innerHTML = `<div class="empty-state">Error: ${error.message}</div>`;
+                return;
+            }
+
+            const records = (data || []).map(r => ({ ...r, _tab: 'approved' }));
+            allRequests = allRequests.filter(r => r._tab !== 'approved').concat(records);
+
+            renderApprovedSection();
+        }
+
+        function renderApprovedSection() {
+            const container = document.getElementById('approvedContent');
+            const approved = allRequests.filter(r => r._tab === 'approved');
+            const filtered = getFilteredData(approved);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:8px;">🔍</div><p>${approved.length > 0 ? 'No students found for selected filters' : 'No approved students found.'}</p></div>`;
+                return;
+            }
+
+            let html = '<div class="notification-list">';
+            filtered.forEach(req => {
+                const photoUrl = req.face_image_url || req.photo_url || '';
+                const photoHtml = photoUrl
+                    ? `<img src="${photoUrl}" alt="Photo" class="notif-photo" onclick="window.open('${photoUrl}', '_blank')" style="cursor:pointer;">`
+                    : `<div style="width:50px;height:50px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">👤</div>`;
+                const nameEsc = escapeHTML(req.name || 'Unknown');
+                const rollEsc = escapeHTML(req.roll_number || '');
+                const emailEsc = escapeHTML(req.email || '');
+                const yearEsc = req.year ? escapeHTML(req.year.toString()) + ' Year' : '';
+                const semEsc = req.semester ? 'Sem ' + escapeHTML(req.semester.toString()) : '';
+                const deptEsc = escapeHTML(req.department || req.branch || '');
+                const secEsc = req.section ? 'Sec ' + escapeHTML(req.section) : '';
+                const detail = [yearEsc, semEsc, deptEsc, secEsc].filter(Boolean).join(' • ');
+
+                // Check completeness
+                const isIncomplete = (
+                    !req.student_mobile || 
+                    !req.father_name || 
+                    !req.father_mobile || 
+                    !req.father_occupation
+                );
+
+                const statusBadge = isIncomplete 
+                    ? `<span style="background:#fff7ed;color:#c2410c;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;border:1px solid #ffedd5;margin-left:8px;">INCOMPLETE PROFILE</span>`
+                    : '';
+
+                html += `
+                    <div class="notif-item" id="approved-${req.id}">
+                        <div class="notif-photo-wrapper">
+                            ${photoHtml}
+                            <div class="notif-content">
+                                <div class="notif-name">${nameEsc} <span class="notif-roll">${rollEsc}</span> ${statusBadge}</div>
+                                <div class="notif-details">${detail}</div>
+                                <div class="notif-time">${emailEsc}</div>
+                            </div>
+                        </div>
+                        <div class="notif-actions">
+                            <button class="btn btn-edit" onclick="moveApprovedToPending('${req.id}')" title="Move back to pending">Edit</button>
+                            <button class="btn btn-danger" onclick="rejectApprovedStudent('${req.id}')" title="Reject this student">Reject</button>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Rejected tab = records from `student_requests` table with status 'rejected'
+        async function loadRejectedStudents() {
+            const container = document.getElementById('rejectedContent');
+            if (!container) return;
+
+            const { data, error } = await sb
+                .from('student_requests')
+                .select('*')
+                .eq('status', 'rejected')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Rejected fetch error:', error);
+                container.innerHTML = `<div class="empty-state">Error: ${error.message}</div>`;
+                return;
+            }
+
+            const records = (data || []).map(r => ({ ...r, _tab: 'rejected' }));
+            allRequests = allRequests.filter(r => r._tab !== 'rejected').concat(records);
+
+            renderRejectedSection();
+        }
+
+        function renderRejectedSection() {
+            const container = document.getElementById('rejectedContent');
+            const rejected = allRequests.filter(r => r._tab === 'rejected');
+            const filtered = getFilteredData(rejected);
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div style="font-size:2.5rem;margin-bottom:8px;">🔍</div><p>${rejected.length > 0 ? 'No students found for selected filters' : 'No rejected requests.'}</p></div>`;
+                return;
+            }
+
+            let html = '<div class="notification-list">';
+            filtered.forEach(req => {
+                const photoUrl = req.face_image_url || req.photo_url || '';
+                const photoHtml = photoUrl
+                    ? `<img src="${photoUrl}" alt="Photo" class="notif-photo" onclick="window.open('${photoUrl}', '_blank')" style="cursor:pointer;">`
+                    : `<div style="width:50px;height:50px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;">👤</div>`;
+                const nameEsc = escapeHTML(req.name || 'Unknown');
+                const rollEsc = escapeHTML(req.roll_number || '');
+                const emailEsc = escapeHTML(req.email || formatTime(req.created_at));
+                const yearEsc = req.year ? escapeHTML(req.year.toString()) + ' Year' : '';
+                const semEsc = req.semester ? 'Sem ' + escapeHTML(req.semester.toString()) : '';
+                const deptEsc = escapeHTML(req.department || req.branch || '');
+                const secEsc = req.section ? 'Sec ' + escapeHTML(req.section) : '';
+                const detail = [yearEsc, semEsc, deptEsc, secEsc].filter(Boolean).join(' • ');
+
+                html += `
+                    <div class="notif-item" id="rejected-${req.id}">
+                        <div class="notif-photo-wrapper">
+                            ${photoHtml}
+                            <div class="notif-content">
+                                <div class="notif-name">${nameEsc} <span class="notif-roll">${rollEsc}</span></div>
+                                <div class="notif-details">${detail}</div>
+                                <div class="notif-time">${emailEsc}</div>
+                            </div>
+                        </div>
+                        <div class="notif-actions">
+                            <button class="btn btn-edit" onclick="moveRejectedToPending('${req.id}')" title="Move back to pending">Edit</button>
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // --- TOAST HELPERS ---
+        function showSuccessToast(msg) {
+            if (typeof showInfo === 'function') {
+                showInfo(msg);
+            } else {
+                console.log('Toast:', msg);
+                alert(msg); // Fallback
+            }
+        }
+
+        async function loadRequests() {
+            // Load all three in parallel
+            await Promise.all([
+                loadPendingStudents(),
+                loadApprovedStudents(),
+                loadRejectedStudents()
+            ]);
+        }
+
+        // Helper: move a student_request into students table (approve)
+        async function moveToStudents(req) {
+            const payload = { ...req };
+            // Strip non-existent or auto-generated columns
+            delete payload.id;
+            delete payload.created_at;
+            delete payload.status;
+            delete payload.department;
+            delete payload.email;
+
+            // Re-verify completion strictly based on requirements
+            payload.profile_completed = !!(
+                payload.student_mobile && 
+                payload.father_name && 
+                payload.father_mobile && 
+                payload.father_occupation
+            );
+
+            const { error: insertErr } = await sb
+                .from('students')
+                .insert([payload]);
+            return insertErr;
+        }
+
+        async function processRequest(requestId, action) {
+            // Role and session are already checked by protectRoute on load
+            // But we double check for active session before sensitive actions
+            const { data: { session: s } } = await sb.auth.getSession();
+            if (!s) { window.location.replace('login.html'); return; }
+            session = s;
+
+            const accBtn = document.getElementById(`btn-acc-${requestId}`);
+            const rejBtn = document.getElementById(`btn-rej-${requestId}`);
+            if (accBtn) { accBtn.disabled = true; accBtn.innerHTML = 'Processing...'; }
+            if (rejBtn) { rejBtn.disabled = true; rejBtn.innerHTML = 'Processing...'; }
+
+            try {
+                const user = session.user;
+                localStorage.setItem('user_role', 'verifier');
+                // 1. Fetch the full request
+                const { data: req, error: fetchErr } = await sb
+                    .from('student_requests')
+                    .select('*')
+                    .eq('id', requestId)
+                    .single();
+                if (fetchErr) throw fetchErr;
+
+                if (action === 'approved') {
+                    // 2a. Move to students
+                    const insertErr = await moveToStudents(req);
+                    if (insertErr) throw insertErr;
+
+                    // ── Notification to Student Disabled ──
+                    // await NotificationService.send({ ... });
+
+
+                    // 3. Delete from student_requests ONLY if approved
+                    const { error: delErr } = await sb
+                        .from('student_requests')
+                        .delete()
+                        .eq('id', requestId);
+                    if (delErr) throw delErr;
+                } else if (action === 'rejected') {
+                    // 2b. Mark as rejected in student_requests
+                    const { error: rejectErr } = await sb
+                        .from('student_requests')
+                        .update({ status: 'rejected' })
+                        .eq('id', requestId);
+                    if (rejectErr) throw rejectErr;
+                }
+
+                // 4. Reload UI
+                await loadPendingStudents();
+                if (action === 'approved') {
+                    await loadApprovedStudents();
+                    showInfo('Student approved ✅');
+                } else {
+                    await loadRejectedStudents();
+                    showInfo('Request moved to Rejected ❌');
+                }
+
+            } catch (e) {
+                showError('Action failed: ' + e.message);
+                if (accBtn) { accBtn.disabled = false; accBtn.innerHTML = 'Accept'; }
+                if (rejBtn) { rejBtn.disabled = false; rejBtn.innerHTML = 'Reject'; }
+            }
+        }
+
+        // --- EDIT/MOVE FUNCTIONS ---
+
+        async function moveApprovedToPending(studentId) {
+            try {
+                const { data, error } = await sb.from('students').select('*').eq('id', studentId).single();
+                if (error) throw error;
+
+                const payload = { ...data };
+                delete payload.id;
+                delete payload.created_at;
+                delete payload.status;
+                delete payload.department;
+                delete payload.email;
+                delete payload.face_descriptor;
+
+                const { error: insErr } = await sb.from('student_requests')
+                    .insert([payload]);
+                if (insErr) throw insErr;
+
+                await sb.from('students').delete().eq('id', studentId);
+
+                showSuccessToast('Student moved back to pending');
+                loadApprovedStudents();
+                loadPendingStudents();
+            } catch (e) { showError(e.message); }
+        }
+
+        async function rejectApprovedStudent(studentId) {
+            try {
+                const { data, error } = await sb.from('students').select('*').eq('id', studentId).single();
+                if (error) throw error;
+
+                const payload = { ...data, status: 'rejected' };
+                delete payload.id;
+                delete payload.created_at;
+                delete payload.department;
+                delete payload.email;
+                delete payload.face_descriptor;
+
+                const { error: insErr } = await sb.from('student_requests')
+                    .insert([payload]);
+                if (insErr) throw insErr;
+
+                await sb.from('students').delete().eq('id', studentId);
+
+                showSuccessToast('Student moved to rejected status');
+                loadApprovedStudents();
+                loadRejectedStudents();
+            } catch (e) { showError(e.message); }
+        }
+
+        async function moveRejectedToPending(studentId) {
+            try {
+                const { error } = await sb.from('student_requests')
+                    .update({ status: 'pending' })
+                    .eq('id', studentId);
+                if (error) throw error;
+
+                showSuccessToast('Student moved back to pending');
+                loadRejectedStudents();
+                loadPendingStudents();
+            } catch (e) { showError(e.message); }
+        }
+
+        function editRequest(reqId) {
+            // legacy UI helper - can be removed if not used elsewhere, but keeping for safety
+            const actionsDiv = document.getElementById(`actions-${reqId}`);
+            if (actionsDiv) {
+                actionsDiv.innerHTML = `
+                    <div class="action-row-pending">
+                        <button class="btn btn-success" onclick="processRequest('${reqId}', 'approved')" id="btn-acc-${reqId}">Accept</button>
+                        <button class="btn btn-danger" onclick="processRequest('${reqId}', 'rejected')" id="btn-rej-${reqId}">Reject</button>
+                    </div>
+                `;
+            }
+        }
+
+        // ─── AUTO APPROVER ───────────────────────────────────────
+
+        let autoEnabled = false;
+        let autoPrefix = '';
+        let currentVerifierId = null;
+
+        async function initAutoApprover() {
+            const { data: { user } } = await sb.auth.getUser();
+            if (!user) return;
+            currentVerifierId = user.id;
+
+            const { data } = await sb.from('verifier_settings')
+                .select('*')
+                .eq('verifier_id', currentVerifierId)
+                .maybeSingle();
+
+            if (data) {
+                autoPrefix = data.roll_prefix || '';
+                autoEnabled = data.auto_enabled || false;
+                document.getElementById('rollPrefixInput').value = autoPrefix;
+                updateAutoPrefixPreview();
+                if (autoEnabled) setAutoRunning(true);
+            }
+        }
+
+
+
+        function updateAutoPrefixPreview() {
+            const p = document.getElementById('rollPrefixInput').value.trim().toUpperCase();
+            document.getElementById('prefixPreview').textContent = p ? p + 'XX' : '—';
+            document.getElementById('prefixExamples').textContent = p
+                ? `${p}01, ${p}0A, ${p}A0, ${p}B1, ${p}99…`
+                : '—';
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const inp = document.getElementById('rollPrefixInput');
+            if (inp) inp.addEventListener('input', updateAutoPrefixPreview);
+        });
+
+        async function startAutoApprover() {
+            const prefix = document.getElementById('rollPrefixInput').value.trim();
+            if (!prefix) { showError('Please enter a roll number prefix.'); return; }
+            if (!currentVerifierId) { showError('Not authenticated.'); return; }
+
+            autoPrefix = prefix;
+
+            const { error } = await sb.from('verifier_settings')
+                .upsert({
+                    verifier_id: currentVerifierId,
+                    roll_prefix: prefix,
+                    auto_enabled: true,
+                    started_at: new Date().toISOString()
+                }, { onConflict: 'verifier_id' });
+
+            if (error) { showError('Failed to save settings: ' + error.message); return; }
+
+            autoEnabled = true;
+            setAutoRunning(true);
+            showAutoPopup('Auto Approver Activated ⚡', true);
+
+            // Scan current pending requests for pattern matches
+            const { data: pending } = await sb
+                .from('student_requests')
+                .select('*');
+            let autoApprovedCount = 0;
+            for (const req of (pending || [])) {
+                if (matchesAutoApprovePattern(req.roll_number)) {
+                    const insertErr = await moveToStudents(req);
+                    if (!insertErr) {
+                        await sb.from('student_requests').delete().eq('id', req.id);
+                        autoApprovedCount++;
+                    }
+                }
+            }
+            await loadPendingStudents();
+            await loadApprovedStudents();
+            if (autoApprovedCount > 0) showInfo(`Auto-approved ${autoApprovedCount} student(s).`);
+        }
+
+        async function stopAutoApprover() {
+            if (!currentVerifierId) return;
+
+            const { error } = await sb.from('verifier_settings')
+                .update({ auto_enabled: false })
+                .eq('verifier_id', currentVerifierId);
+
+            if (error) { showError('Failed to stop: ' + error.message); return; }
+
+            autoEnabled = false;
+            setAutoRunning(false);
+            showAutoPopup('Auto Approver Stopped', false);
+        }
+
+        function matchesAutoApprovePattern(rollNumber) {
+            if (!autoPrefix || !rollNumber) return false;
+            const regex = new RegExp('^' + autoPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[A-Z0-9]{2}$', 'i');
+            return regex.test(rollNumber);
+        }
+
+        function showAutoPopup(msg, isSuccess) {
+            const popup = document.getElementById('autoPopup');
+            const icon = document.getElementById('autoPopupIcon');
+            const msgEl = document.getElementById('autoPopupMsg');
+            icon.textContent = isSuccess ? '✔' : '✖';
+            msgEl.textContent = msg;
+            popup.style.background = isSuccess ? '#22c55e' : '#ef4444';
+            popup.style.display = 'flex';
+            popup.style.animation = 'none';
+            void popup.offsetWidth; // reflow
+            popup.style.animation = 'fadeInDown 0.3s ease-out';
+            setTimeout(() => { popup.style.display = 'none'; }, 2500);
+        }
+
+        function setAutoRunning(running) {
+            const dot = document.getElementById('autoStatusDot');
+            const label = document.getElementById('autoStatusLabel');
+            const startBtn = document.getElementById('startAutoBtn');
+            const stopBtn = document.getElementById('stopAutoBtn');
+            const navAutoBtn = document.getElementById('nav-auto');
+
+            if (running) {
+                dot.classList.add('running');
+                label.textContent = 'Running';
+                label.classList.add('running');
+                if (navAutoBtn) navAutoBtn.classList.add('auto-running');
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+            } else {
+                dot.classList.remove('running');
+                label.textContent = 'Stopped';
+                label.classList.remove('running');
+                if (navAutoBtn) navAutoBtn.classList.remove('auto-running');
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        // ─── REALTIME LISTENER ─────────────────────────────────────
+        function setupRealtimeListener() {
+            // Watch student_requests for new registrations
+            sb.channel('student_requests_live')
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'student_requests'
+                }, async payload => {
+                    const newReq = payload.new;
+                    if (autoEnabled && matchesAutoApprovePattern(newReq.roll_number)) {
+                        // Auto-approval logic
+                        const insertErr = await moveToStudents(newReq);
+                        if (!insertErr) {
+                            await sb.from('student_requests').delete().eq('id', newReq.id);
+                            showInfo(`Auto-approved: ${newReq.name} (${newReq.roll_number})`);
+                        }
+                    } else {
+                        showInfo(`New request: ${newReq.name}`);
+                    }
+                    loadPendingStudents();
+                })
+                .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'student_requests' }, () => loadPendingStudents())
+                .subscribe();
+
+            // Watch students table
+            sb.channel('students_live')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'students' }, () => {
+                    loadApprovedStudents();
+                })
+                .subscribe();
+        }
+
+    </script>
+</body>
+
+</html>

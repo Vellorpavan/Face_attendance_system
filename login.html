@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SVPP Attendance</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue: #1a4fdb;
+            --blue-hover: #1545c3;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #64748b;
+            --border: #e2e8f0;
+            --red: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 440px;
+            perspective: 1000px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            padding: 48px 40px;
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.08);
+            border: 1px solid var(--border);
+            text-align: center;
+            animation: cardEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes cardEntrance {
+            from {
+                opacity: 0;
+                transform: translateY(30px) rotateX(-5deg);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) rotateX(0deg);
+            }
+        }
+
+        .logo-section {
+            margin-bottom: 40px;
+        }
+
+        .logo-img {
+            width: 84px;
+            height: auto;
+            margin-bottom: 24px;
+            filter: drop-shadow(0 8px 16px rgba(26, 79, 219, 0.15));
+        }
+
+        .college-name {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .system-name {
+            font-size: 15px;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        .welcome-text {
+            margin-bottom: 40px;
+        }
+
+        .welcome-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .welcome-sub {
+            font-size: 15px;
+            color: var(--text-sub);
+            line-height: 1.6;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 16px 24px;
+            background: white;
+            border: 1.5px solid var(--border);
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 24px;
+        }
+
+        .login-btn:hover {
+            border-color: #cbd5e1;
+            background: #fcfcfc;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-top: 32px;
+        }
+
+        .footer-text a {
+            color: var(--blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* Error Toast */
+        .err-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1e293b;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .err-toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .err-icon {
+            color: var(--red);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo-section">
+                <img src="logo.png" alt="SVPP Logo" class="logo-img" />
+                <div class="college-name">SVPP</div>
+                <div class="system-name">AI Attendance Management</div>
+            </div>
+
+            <div class="welcome-text">
+                <h1 class="welcome-title">Welcome back!</h1>
+                <p class="welcome-sub">Sign in with your official account to access your digital campus dashboard.</p>
+            </div>
+
+            <button id="googleLoginBtn" class="login-btn" onclick="handleLogin()">
+                <svg class="google-icon" viewBox="0 0 24 24">
+                    <path
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        fill="#4285F4" />
+                    <path
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        fill="#34A853" />
+                    <path
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                        fill="#FBBC05" />
+                    <path
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                        fill="#EA4335" />
+                </svg>
+                Continue with Google
+            </button>
+
+            <div class="footer-text">
+                Problems signing in? <a href="#">Contact Support</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="errToast" class="err-toast">
+        <svg class="err-icon" width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd" />
+        </svg>
+        <span id="errText">Error occurred</span>
+    </div>
+
+    <script>
+        /**
+         * INITIAL LOAD: Direct routing check if already logged in
+         */
+        window.addEventListener('load', async () => {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) {
+                routeUser(session.user);
+            }
+        });
+
+        async function handleLogin() {
+            const btn = document.getElementById('googleLoginBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<span style="opacity:0.6">Authenticating...</span>`;
+
+            const { data, error } = await sb.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: window.location.origin + window.location.pathname
+                        .replace('login.html', '') + 'logincallback.html'
+                }
+            });
+
+            if (error) {
+                showErr(error.message);
+                btn.disabled = false;
+                btn.innerHTML = `<svg class="google-icon" viewBox="0 0 24 24">…</svg> Continue with Google`;
+            }
+        }
+
+        let isRedirecting = false;
+        function redirect(url) {
+            if (isRedirecting) return;
+            isRedirecting = true;
+            window.location.href = url;
+        }
+
+        /**
+         * Role-based routing
+         */
+        async function routeUser(user) {
+            const role = await getUserRole(user);
+
+            if (role === 'admin') {
+                redirect('admin_dashboard.html');
+                return;
+            }
+            if (role === 'teacher') {
+                // Fetch teacher ID and authorized status
+                const { data: tData } = await sb
+                    .from('authorized_teachers')
+                    .select('id, authorized')
+                    .eq('email', user.email.toLowerCase().trim())
+                    .maybeSingle();
+
+                if (tData) {
+                    if (tData.authorized === false) {
+                        showErr("Your teacher login has been locked by the administrator.");
+                        await sb.auth.signOut();
+                        const btn = document.getElementById('googleLoginBtn');
+                        btn.disabled = false;
+                        btn.innerHTML = `<svg class="google-icon" viewBox="0 0 24 24">...</svg> Continue with Google`;
+                        return;
+                    }
+
+                    // Update last login timestamp
+                    await sb.from('authorized_teachers')
+                        .update({ last_login: new Date().toISOString() })
+                        .eq('id', tData.id);
+
+                    localStorage.setItem('teacher_id', tData.id);
+                }
+
+                redirect('teacher_dashboard.html');
+                return;
+            }
+            if (role === 'verifier') {
+                redirect('verifier_dashboard.html');
+                return;
+            }
+
+            // role === 'student'
+            // STEP 6: Add redirect lock to prevent loops
+            if (sessionStorage.getItem("profileCheckComplete")) {
+                console.log("Profile check already done this session. Skipping redirects.");
+                return;
+            }
+
+            // 1. Check if already an approved student
+            const { data: student } = await sb
+                .from('students')
+                .select('id, profile_completed')
+                .eq('auth_user_id', user.id)
+                .maybeSingle();
+
+            if (student) {
+                sessionStorage.setItem("profileCheckComplete", "true");
+                if (student.profile_completed === true) {
+                    redirect('dashboard.html');
+                } else {
+                    redirect('personal_details.html');
+                }
+                return;
+            }
+
+            // 2. Check if there is an active request
+            const { data: req } = await sb
+                .from('student_requests')
+                .select('status, face_image_url, profile_completed, student_mobile, father_name, father_mobile, father_occupation')
+                .eq('auth_user_id', user.id)
+                .maybeSingle();
+
+            if (!req) {
+                // No request found, start profile setup
+                redirect('profile_setup.html');
+                return;
+            }
+
+            if (req.status === 'incomplete' || !req.face_image_url) {
+                redirect('face_capture.html');
+            } else if (req.status === 'pending') {
+                // Determine if they still need to finish personal details
+                const isComplete = req.profile_completed || (
+                    req.student_mobile &&
+                    req.father_name &&
+                    req.father_mobile &&
+                    req.father_occupation
+                );
+                if (!isComplete) {
+                    redirect('personal_details.html');
+                } else {
+                    redirect('pending_approval.html');
+                }
+            } else if (req.status === 'rejected') {
+                redirect('rejected_approval.html');
+            } else {
+                redirect('dashboard.html');
+            }
+        }
+
+        function showErr(msg) {
+            const el = document.getElementById('errToast');
+            document.getElementById('errText').textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 3500);
+        }
+    </script>
+</body>
+
+</html>

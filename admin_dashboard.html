@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Admin Dashboard — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script src="push_notifications.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --green: #12b76a;
+            --amber: #f59e0b;
+            --purple: #7c3aed;
+            --rose: #e53e5a;
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+            --nav-h: 70px;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            overflow-x: hidden;
+        }
+
+        /* Decorative blobs */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -100px;
+            right: -80px;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.2) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 80px;
+            left: -80px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 420px;
+            margin: auto;
+            padding: 16px;
+            padding-bottom: calc(var(--nav-h) + 20px);
+            animation: pageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* ── Header ── */
+        .header {
+            padding: 12px 6px 16px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--blue);
+            margin-bottom: 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .header-badge svg {
+            width: 12px;
+            height: 12px;
+            stroke: var(--blue);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .header-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: var(--tp);
+            letter-spacing: -0.6px;
+            line-height: 1.1;
+        }
+
+        .header-sub {
+            font-size: 13.5px;
+            color: var(--ts);
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        .admin-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #1a4fdb, #4d7dff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 800;
+            box-shadow: 0 6px 20px rgba(26, 79, 219, 0.32);
+        }
+
+        /* ── Notification Bell ── */
+        .notif-bell-wrapper {
+            position: relative;
+            cursor: pointer;
+            padding: 9px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s cubic-bezier(.175, .885, .32, 1.275);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            margin-right: 8px;
+        }
+
+        .notif-bell-wrapper:hover {
+            background: rgba(255, 255, 255, .95);
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .notif-bell-wrapper svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--tp);
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--rose);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 3px 10px rgba(229, 62, 90, .35);
+            animation: badgePop .4s cubic-bezier(.175, .885, .32, 1.275) both;
+        }
+
+        @keyframes badgePop {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* ── Stats ── */
+        .stats {
+            display: flex;
+            gap: 10px;
+        }
+
+        .stats .card {
+            flex: 1;
+        }
+
+        .card,
+        .module-card {
+            width: 100%;
+            border-radius: 16px;
+            padding: 16px;
+            box-sizing: border-box;
+            background: var(--card);
+            box-shadow: 0 2px 12px rgba(26, 79, 219, 0.07);
+            border: 1px solid var(--border);
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .module-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            text-align: left;
+            transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .module-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 36px rgba(26, 79, 219, 0.14);
+        }
+
+        .module-content h3 {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 4px;
+        }
+
+        .module-content p {
+            font-size: 11.5px;
+            color: var(--ts);
+            font-weight: 500;
+        }
+
+        .module-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+        }
+
+        .module-icon svg {
+            width: 29px;
+        }
+
+        .module-arrow {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.03);
+            color: var(--ts);
+        }
+
+        .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .stat-lbl {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--tm);
+            margin-top: 3px;
+        }
+
+        /* ── Hero banner ── */
+        .hero-banner {
+            background: linear-gradient(135deg, #0d2d8a 0%, #1a4fdb 50%, #3a6fff 100%);
+            border-radius: 24px;
+            padding: 22px;
+            box-shadow: 0 10px 36px rgba(26, 79, 219, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            position: relative;
+            overflow: hidden;
+            border: none;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .hero-banner::after {
+            content: '';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.07);
+            pointer-events: none;
+        }
+
+        .hero-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-icon svg {
+            width: 26px;
+            height: 26px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 1.8;
+        }
+
+        .hero-text h3 {
+            font-size: 15.5px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .hero-text p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.72);
+            line-height: 1.5;
+        }
+
+        /* ── Section heading ── */
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 6px;
+        }
+
+        .section-head h2 {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--tp);
+        }
+
+        .section-head span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--blue);
+        }
+
+        /* ── Modules grid ── */
+        .modules-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 480px) {
+            .modules-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* ── Themes ── */
+        .theme-blue .module-icon {
+            background: rgba(26, 79, 219, 0.1);
+        }
+
+        .theme-blue .module-icon svg {
+            stroke: #1a4fdb;
+        }
+
+        .theme-blue .module-arrow {
+            background: rgba(26, 79, 219, 0.08);
+        }
+
+        .theme-blue .module-arrow svg {
+            stroke: #1a4fdb;
+        }
+
+        .theme-green .module-icon {
+            background: rgba(18, 183, 106, 0.1);
+        }
+
+        .theme-green .module-icon svg {
+            stroke: #12b76a;
+        }
+
+        .theme-green .module-arrow {
+            background: rgba(18, 183, 106, 0.08);
+        }
+
+        .theme-green .module-arrow svg {
+            stroke: #12b76a;
+        }
+
+        .theme-orange .module-icon {
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        .theme-orange .module-icon svg {
+            stroke: #f97316;
+        }
+
+        .theme-orange .module-arrow {
+            background: rgba(249, 115, 22, 0.08);
+        }
+
+        .theme-orange .module-arrow svg {
+            stroke: #f97316;
+        }
+
+        .theme-purple .module-icon {
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        .theme-purple .module-icon svg {
+            stroke: #7c3aed;
+        }
+
+        .theme-purple .module-arrow {
+            background: rgba(124, 58, 237, 0.08);
+        }
+
+        .theme-purple .module-arrow svg {
+            stroke: #7c3aed;
+        }
+
+        .theme-teal .module-icon {
+            background: rgba(20, 184, 166, 0.1);
+        }
+
+        .theme-teal .module-icon svg {
+            stroke: #14b8a6;
+        }
+
+        .theme-teal .module-arrow {
+            background: rgba(20, 184, 166, 0.08);
+        }
+
+        .theme-teal .module-arrow svg {
+            stroke: #14b8a6;
+        }
+
+        .theme-yellow .module-icon {
+            background: rgba(234, 179, 8, 0.1);
+        }
+
+        .theme-yellow .module-icon svg {
+            stroke: #eab308;
+        }
+
+        .theme-yellow .module-arrow {
+            background: rgba(234, 179, 8, 0.08);
+        }
+
+        .theme-yellow .module-arrow svg {
+            stroke: #eab308;
+        }
+
+        .theme-pink .module-icon {
+            background: rgba(236, 72, 153, 0.1);
+        }
+
+        .theme-pink .module-icon svg {
+            stroke: #ec4899;
+        }
+
+        .theme-pink .module-arrow {
+            background: rgba(236, 72, 153, 0.08);
+        }
+
+        .theme-pink .module-arrow svg {
+            stroke: #ec4899;
+        }
+
+        .theme-cyan .module-icon {
+            background: rgba(6, 182, 212, 0.1);
+        }
+
+        .theme-cyan .module-icon svg {
+            stroke: #06b6d4;
+        }
+
+        .theme-cyan .module-arrow {
+            background: rgba(6, 182, 212, 0.08);
+        }
+
+        .theme-cyan .module-arrow svg {
+            stroke: #06b6d4;
+        }
+
+        /* ── Quick stats strip ── */
+        .quick-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding-bottom: 8px;
+            /* For scrollbar breathing room */
+        }
+
+        .quick-strip::-webkit-scrollbar {
+            display: none;
+        }
+
+        .quick-chip {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card);
+            border-radius: 14px;
+            padding: 10px 14px;
+            box-shadow: 0 2px 10px rgba(26, 79, 219, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        .quick-chip .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .quick-chip span {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--tp);
+        }
+
+        .quick-chip small {
+            font-size: 10.5px;
+            color: var(--tm);
+            display: block;
+        }
+
+        /* ── Bottom nav ── */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-h);
+            background: rgba(255, 255, 255, 0.94);
+            border-top: 1px solid rgba(26, 79, 219, 0.08);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 8px 10px;
+            z-index: 100;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px 0;
+            transition: transform 0.15s;
+        }
+
+        .nav-item:active {
+            transform: scale(0.9);
+        }
+
+        .nav-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .nav-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8;
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--tm);
+        }
+
+        .nav-item.active .nav-icon {
+            background: var(--blue-soft);
+        }
+
+        .nav-item.active .nav-icon svg {
+            stroke: var(--blue);
+        }
+
+        .nav-item.active .nav-label {
+            color: var(--blue);
+        }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #e4ecff 25%, #f1f5ff 50%, #e4ecff 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 12px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main">
+            <!-- Header -->
+            <div class="header">
+                <div>
+                    <div class="header-badge">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                        Admin Panel
+                    </div>
+                    <h1 class="header-title">Admin<br>Dashboard</h1>
+                    <p class="header-sub">Manage your system</p>
+                </div>
+                <div style="display: flex; align-items: center;">
+                    <div class="notif-bell-wrapper" onclick="window.location.href='notifications.html'">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <div id="notif-badge" class="notif-badge"></div>
+                    </div>
+                    <div class="admin-avatar" id="adminAvatar">A</div>
+                </div>
+            </div>
+
+            <!-- Stats pills -->
+            <div class="stats">
+                <div class="card">
+                    <div class="stat-val" style="color:#1a4fdb" id="statTeachers">—</div>
+                    <div class="stat-lbl">Teachers</div>
+                </div>
+                <div class="card">
+                    <div class="stat-val" style="color:#12b76a" id="statSubjects">—</div>
+                    <div class="stat-lbl">Subjects</div>
+                </div>
+                <div class="card">
+                    <div class="stat-val" style="color:#7c3aed" id="statStudents">—</div>
+                    <div class="stat-lbl">Students</div>
+                </div>
+            </div>
+
+            <!-- Hero banner -->
+            <div class="hero-banner">
+                <div class="hero-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                </div>
+                <div class="hero-text">
+                    <h3>SVPP ATTENDANCE (FACE RECOGNITION)</h3>
+                    <p>Biometric face recognition system with real-time attendance tracking</p>
+                </div>
+            </div>
+
+            <!-- System Modules Grid -->
+            <div class="section-head">
+                <h2>Management</h2>
+                <span id="moduleCountText">12 modules</span>
+            </div>
+
+            <div class="modules-grid" id="moduleGrid">
+                <!-- Javascript will render modules here -->
+            </div>
+        </div> <!-- Close modules grid -->
+
+        <!-- Quick stats strip -->
+        <div class="section-head" style="padding-top: 10px;">
+            <h2>Today's Activity</h2>
+        </div>
+        <div class="quick-strip">
+            <div class="quick-chip">
+                <span class="dot" style="background:#12b76a"></span>
+                <div><span id="q1">—</span><small>Present Today</small></div>
+            </div>
+            <div class="quick-chip">
+                <span class="dot" style="background:#e53e5a"></span>
+                <div><span id="q2">—</span><small>Absent Today</small></div>
+            </div>
+            <div class="quick-chip">
+                <span class="dot" style="background:#f59e0b"></span>
+                <div><span id="q3">—</span><small>Sessions Active</small></div>
+            </div>
+            <div class="quick-chip">
+                <span class="dot" style="background:#1a4fdb"></span>
+                <div><span id="q4">—</span><small>Subjects Today</small></div>
+            </div>
+        </div>
+
+    </div> <!-- Close main -->
+    </div> <!-- Close container -->
+
+    <!-- Bottom nav -->
+    <nav class="bottom-nav">
+        <div class="nav-item active">
+            <div class="nav-icon"><svg viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg></div>
+            <span class="nav-label">Dashboard</span>
+        </div>
+        <div class="nav-item" onclick="window.location.href='admin_attendance.html'">
+            <div class="nav-icon"><svg viewBox="0 0 24 24">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg></div>
+            <span class="nav-label">Attendance</span>
+        </div>
+        <div class="nav-item" onclick="window.location.href='admin_subjects.html'">
+            <div class="nav-icon"><svg viewBox="0 0 24 24">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg></div>
+            <span class="nav-label">Subjects</span>
+        </div>
+        <div class="nav-item" onclick="handleSignOut()">
+            <div class="nav-icon"><svg viewBox="0 0 24 24">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                </svg></div>
+            <span class="nav-label">Sign Out</span>
+        </div>
+    </nav>
+
+    <script>
+        const modules = [
+            { title: 'Manage Teachers', desc: 'Add and manage teacher accounts', icon: '<circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0 1 16 0v1"/><path d="M19 8l2 2-2 2"/>', theme: 'theme-blue', url: 'admin_teachers.html' },
+            { title: 'Manage Subjects', desc: 'Create and manage subject list', icon: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 9h8M8 13h6"/>', theme: 'theme-green', url: 'admin_subjects.html' },
+            { title: 'Assign Teachers', desc: 'Link teachers to their subjects', icon: '<circle cx="5" cy="12" r="3"/><circle cx="19" cy="12" r="3"/><path d="M8 12h8"/><path d="M5 9V5"/><path d="M19 9V5"/>', theme: 'theme-orange', url: 'admin_assign.html' },
+            { title: 'View Attendance', desc: 'Monitor all attendance records', icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', theme: 'theme-purple', url: 'admin_attendance.html' },
+            { title: 'Manage Timetable', desc: 'Set up class schedules', icon: '<rect x="3" y="4" width="18" height="16" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>', theme: 'theme-teal', url: 'admin_timetable.html' },
+            { title: 'Attendance Rules', desc: 'Configure lock times & rules', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>', theme: 'theme-yellow', url: 'admin_rules.html' },
+            { title: 'Manage Holidays', desc: 'Set vacation & break days', icon: '<path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z"/>', theme: 'theme-cyan', url: 'admin_holidays.html' },
+            { title: 'Teacher Workload', desc: 'View availability and schedule', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/>', theme: 'theme-blue', url: 'admin_teacher_availability.html' },
+            {
+                title: 'Manage Verifiers',
+                desc: 'Control who can approve student registrations',
+                icon: '<path d="M12 2l4 4-4 4-4-4 4-4z"/><path d="M4 14h16v6H4z"/>',
+                theme: 'theme-cyan',
+                url: 'admin_verifiers.html'
+            },
+            {
+                title: 'Promote Students',
+                desc: 'Upgrade students to next semester/year',
+                icon: '<polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline>',
+                theme: 'theme-purple',
+                url: 'promote_students.html'
+            },
+            {
+                title: 'Attendance Analyzer',
+                desc: 'Pattern detection & smart analytics',
+                icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline><path d="M12 18V6"></path><path d="M6 12h12"></path>',
+                theme: 'theme-blue',
+                url: 'admin_attendance_analyzer.html'
+            },
+            {
+                title: 'Manage Students',
+                desc: 'View and edit student profiles',
+                icon: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+                theme: 'theme-green',
+                url: 'manage-students.html'
+            },
+            {
+                title: 'Notifications',
+                desc: 'Manage system announcements',
+                icon: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+                theme: 'theme-pink',
+                url: 'admin_notifications.html'
+            }
+        ];
+
+        function renderModules() {
+            const grid = document.getElementById('moduleGrid');
+            const count = document.getElementById('moduleCountText');
+            if (count) count.textContent = `${modules.length} modules`;
+
+            if (grid) {
+                grid.innerHTML = modules.map((m, i) => {
+                    return `
+                    <a class="module-card ${m.theme}" href="${m.url}" style="animation-delay:${(i * 0.04).toFixed(2)}s">
+                        <div class="module-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${m.icon}</svg></div>
+                        <div class="module-content">
+                            <h3>${m.title}</h3>
+                            <p>${m.desc}</p>
+                        </div>
+                        <div class="module-arrow"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+                    </a>
+                    `;
+                }).join('');
+            }
+        }
+
+        async function updateDashboard() {
+            try {
+                const [
+                    { count: teachers },
+                    { count: subjects },
+                    { count: students }
+                ] = await Promise.all([
+                    sb.from('authorized_teachers').select('*', { count: 'exact', head: true }),
+                    sb.from('subjects').select('*', { count: 'exact', head: true }),
+                    sb.from('students').select('*', { count: 'exact', head: true })
+                ]);
+
+                document.getElementById('statTeachers').textContent = teachers ?? 0;
+                document.getElementById('statSubjects').textContent = subjects ?? 0;
+                document.getElementById('statStudents').textContent = students ?? 0;
+
+                // Today's attendance counts
+                const today = new Date().toISOString().split('T')[0];
+                const { data: todayAtt } = await sb.from('attendance').select('status').eq('date', today);
+                if (todayAtt) {
+                    const present = todayAtt.filter(r => r.status === 'present').length;
+                    const absent = todayAtt.filter(r => r.status === 'absent').length;
+                    document.getElementById('q1').textContent = present;
+                    document.getElementById('q2').textContent = absent;
+                    document.getElementById('q3').textContent = Math.ceil((present + absent) / Math.max(students, 1) * 4);
+                    document.getElementById('q4').textContent = subjects ?? '—';
+                } else {
+                    ['q1', 'q2', 'q3', 'q4'].forEach(id => document.getElementById(id).textContent = '0');
+                }
+            } catch (e) {
+                console.error("Dashboard stats error:", e);
+            }
+        }
+
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['admin']);
+            if (!session) return;
+
+            if (session) {
+                localStorage.setItem('user_role', 'admin');
+                const user = session.user;
+                // Avatar initials
+                const meta = session.user.user_metadata;
+                const name = meta?.full_name || meta?.name || 'Admin';
+                const init = name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                document.getElementById('adminAvatar').textContent = init;
+
+                renderModules();
+                await updateDashboard();
+            }
+        });
+
+        // Listen for global teacher updates
+        window.addEventListener('teachersUpdated', () => {
+            updateDashboard();
+        });
+
+        // Listen for realtime Supabase changes
+        sb.channel('teachers-channel-dash')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'authorized_teachers' }, () => {
+                updateDashboard();
+            })
+            .subscribe();
+
+        async function handleSignOut() {
+            sessionStorage.removeItem("profileCheckComplete");
+            await sb.auth.signOut();
+            window.location.href = 'login.html';
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+    </script>
+</body>
+
+</html>

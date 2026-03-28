@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = window.CONFIG?.SUPABASE_URL;
+        const SUPABASE_ANON = window.CONFIG?.SUPABASE_ANON;
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        
+        async function runTest() {
+            console.log("Testing students query...");
+            const { data, error } = await sb.from('students').select('*').order('created_at', { ascending: false });
+            console.log("Data:", data ? data.length : "null");
+            console.log("Error:", error);
+            
+            const { data: adminData, error: adminError } = await sb.from('admins').select('*');
+            console.log("Admin Data:", adminData);
+            console.log("Admin Error:", adminError);
+        }
+        runTest();
+    </script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Request Rejected — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(165deg, #fff0f0 0%, #ffdada 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1.5px solid rgba(229, 62, 90, 0.3);
+            border-radius: 28px;
+            padding: 40px 30px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(229, 62, 90, 0.15);
+        }
+
+        .icon-wrap {
+            width: 80px;
+            height: 80px;
+            background: rgba(229, 62, 90, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .icon-wrap svg {
+            width: 40px;
+            height: 40px;
+            stroke: #e53e5a;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #8c1c2e;
+            margin-bottom: 12px;
+        }
+
+        p {
+            font-size: 14px;
+            color: #b54558;
+            line-height: 1.5;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #e53e5a;
+            border: none;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(229, 62, 90, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="icon-wrap">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+        </div>
+        <h1>Request Rejected</h1>
+        <p>Your registration request has been rejected by the administrator. Please contact the staff or try submitting
+            again by resetting your profile.</p>
+        <button class="btn" onclick="resetProfile()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+            </svg>
+            Reset Profile
+        </button>
+        <div style="margin-top:20px;">
+            <a href="#" onclick="logout()"
+                style="color:#e53e5a; font-size:13px; font-weight:600; text-decoration:none;">Logout</a>
+        </div>
+    </div>
+    <script>
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['student', 'admin']);
+            if (!session) return;
+
+            // Check if already an approved student
+            const { data: student } = await sb.from('students').select('id').eq('uid', session.user.id).maybeSingle();
+            if (student) {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Check if request is actually rejected
+            const { data: req } = await sb.from('student_requests').select('status, face_image_url').eq('uid', session.user.id).maybeSingle();
+            if (!req) {
+                window.location.href = 'profile_setup.html';
+            } else if (req.status === 'pending') {
+                window.location.href = 'pending_approval.html';
+            } else if (req.status === 'incomplete' || !req.face_image_url) {
+                window.location.href = 'face_capture.html';
+            }
+        });
+
+        async function resetProfile() {
+            const btn = document.querySelector('.btn');
+            btn.innerHTML = 'Resetting...';
+            btn.disabled = true;
+
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return;
+
+            // Delete request so they can start over
+            await sb.from('student_requests').delete().eq('uid', session.user.id);
+            window.location.href = 'profile_setup.html';
+        }
+
+        async function logout() {
+            sessionStorage.removeItem("profileCheckComplete");
+            await sb.auth.signOut();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+
+</html>

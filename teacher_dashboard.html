@@ -1,0 +1,2412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Teacher Dashboard — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="notification.js"></script>
+    <script src="push_notifications.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.13);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f3f8ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+            --nav-h: 68px;
+        }
+
+        html,
+        body {
+            height: auto;
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            overflow-x: hidden;
+            overflow-y: auto;
+            color: var(--tp)
+        }
+
+        .top-strip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 200px;
+            z-index: 0;
+            background: linear-gradient(165deg, #ddeeff 0%, #f3f8ff 100%);
+            pointer-events: none
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -80px;
+            right: -60px;
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.22) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            padding: 0 0 100px;
+            /* Increased bottom padding to clear floating nav bar */
+            max-width: 480px;
+            margin: 0 auto;
+            animation: pageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(16px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .header {
+            padding: 52px 20px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-signout-top {
+            background: rgba(229, 62, 90, 0.08);
+            border: 1px solid rgba(229, 62, 90, 0.15);
+            color: #e53e5a;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-signout-top svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .btn-signout-top:active {
+            transform: scale(0.95);
+            background: rgba(229, 62, 90, 0.15);
+        }
+
+        /* ── Notification Bell ── */
+        .notif-bell-wrapper {
+            position: relative;
+            cursor: pointer;
+            padding: 9px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 14px;
+            border: 1.5px solid var(--blue-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s cubic-bezier(.175, .885, .32, 1.275);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .notif-bell-wrapper:hover {
+            background: rgba(255, 255, 255, .95);
+            transform: scale(1.1) rotate(5deg);
+            border-color: rgba(26, 79, 219, .25);
+        }
+
+        .notif-bell-wrapper svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--ts);
+            fill: none;
+            stroke-width: 2.2;
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: linear-gradient(135deg, #ff4d6d, #e53e5a);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 10px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #fff;
+            box-shadow: 0 3px 10px rgba(229, 62, 90, .35);
+            animation: badgePop .4s cubic-bezier(.175, .885, .32, 1.275) both;
+        }
+
+        @keyframes badgePop {
+            0% {
+                transform: scale(0);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a4fdb, #4d7dff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.2);
+            flex-shrink: 0;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            padding: 0 20px 20px
+        }
+
+        .stat-card {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 14px 12px;
+            box-shadow: 0 2px 12px rgba(26, 79, 219, 0.07), 0 1px 4px rgba(0, 0, 0, 0.04);
+            text-align: center
+        }
+
+        .stat-val {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--blue);
+            letter-spacing: -0.5px
+        }
+
+        .stat-lbl {
+            font-size: 10.5px;
+            font-weight: 500;
+            color: var(--tm);
+            margin-top: 2px
+        }
+
+        .schedule-strip {
+            margin: 0 20px 24px;
+            background: linear-gradient(135deg, #1a4fdb 0%, #2a62f0 100%);
+            border-radius: 22px;
+            padding: 20px;
+            box-shadow: 0 8px 28px rgba(26, 79, 219, 0.32);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 16px
+        }
+
+        .schedule-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.15);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .schedule-icon svg {
+            width: 24px;
+            height: 24px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 1.8
+        }
+
+        .schedule-text h3 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 3px
+        }
+
+        .schedule-text p {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7)
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 20px 12px
+        }
+
+        .section-head h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--tp)
+        }
+
+        .card-list {
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px
+        }
+
+        .subject-card {
+            background: var(--card);
+            border-radius: 22px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(26, 79, 219, 0.08), 0 1px 6px rgba(0, 0, 0, 0.04);
+            border: 1px solid var(--border);
+            transition: transform 0.15s, box-shadow 0.15s;
+            animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        .subject-card:active {
+            transform: scale(0.985)
+        }
+
+        @keyframes cardIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            margin-bottom: 14px
+        }
+
+        .subject-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .subject-icon svg {
+            width: 22px;
+            height: 22px
+        }
+
+        .subject-info {
+            flex: 1
+        }
+
+        .subject-name {
+            font-size: 15.5px;
+            font-weight: 700;
+            color: var(--tp);
+            letter-spacing: -0.2px;
+            margin-bottom: 5px
+        }
+
+        .tag-row {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--blue)
+        }
+
+        .att-pct {
+            flex-shrink: 0;
+            text-align: center
+        }
+
+        .att-pct .val {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--tp)
+        }
+
+        .att-pct .lbl {
+            font-size: 9.5px;
+            color: var(--tm)
+        }
+
+        .card-divider {
+            height: 1px;
+            background: rgba(26, 79, 219, 0.07);
+            margin-bottom: 14px
+        }
+
+        .card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .class-info {
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .class-info svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8
+        }
+
+        .class-info span {
+            font-size: 12px;
+            color: var(--ts);
+            font-weight: 500
+        }
+
+        .btn-attend {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #1a4fdb, #2a62f0);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 12.5px;
+            font-weight: 700;
+            box-shadow: 0 4px 16px rgba(26, 79, 219, 0.32);
+            transition: transform 0.15s, box-shadow 0.15s
+        }
+
+        .btn-attend svg {
+            width: 14px;
+            height: 14px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .btn-attend:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(26, 79, 219, 0.4)
+        }
+
+        .btn-attend:active {
+            transform: translateY(0) scale(0.97)
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-h);
+            background: rgba(255, 255, 255, 0.92);
+            border-top: 1px solid rgba(26, 79, 219, 0.08);
+            backdrop-filter: blur(16px);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 0 4px 8px;
+            /* Reduced side padding for 4 items */
+            z-index: 100;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            padding: 8px 0;
+            transition: transform 0.15s
+        }
+
+        .nav-item:active {
+            transform: scale(0.92)
+        }
+
+        .nav-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s
+        }
+
+        .nav-icon svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--tm)
+        }
+
+        .nav-item.active .nav-icon {
+            background: var(--blue-soft)
+        }
+
+        .nav-item.active .nav-icon svg {
+            stroke: var(--blue)
+        }
+
+        .nav-item.active .nav-label {
+            color: var(--blue)
+        }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #e8f0ff 25%, #f3f8ff 50%, #e8f0ff 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+
+        .tab-view {
+            display: none;
+            animation: tabFadeIn 0.3s ease;
+        }
+
+        .tab-view.active {
+            display: block;
+        }
+
+        @keyframes tabFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .page-header {
+            padding: 20px 20px 10px;
+        }
+
+        .page-header h2 {
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.5px;
+        }
+
+        /* Leave Modal Specifics */
+        .leave-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            display: none;
+            align-items: flex-end;
+            /* Mobile Bottom Sheet */
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .leave-modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .leave-card {
+            background: #fff;
+            border-radius: 28px 28px 0 0;
+            width: 100%;
+            max-width: 480px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .leave-modal.show .leave-card {
+            transform: translateY(0);
+        }
+
+        /* Delete Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 27, 62, 0.4);
+            backdrop-filter: blur(8px);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .confirm-card {
+            background: #fff;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 340px;
+            padding: 32px 24px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(13, 27, 62, 0.2);
+            transform: scale(0.9);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.show .confirm-card {
+            transform: scale(1);
+        }
+
+        .confirm-icon {
+            width: 64px;
+            height: 64px;
+            background: #fff1f0;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: #ff4d4f;
+        }
+
+        .leave-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 24px 12px;
+        }
+
+        .leave-body {
+            padding: 0 24px 100px;
+            /* Space for sticky button + padding */
+            overflow-y: auto;
+            flex: 1;
+            scroll-behavior: smooth;
+        }
+
+        .leave-section {
+            background: rgba(26, 79, 219, 0.03);
+            border-radius: 22px;
+            padding: 18px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(26, 79, 219, 0.05);
+        }
+
+        .section-label {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: var(--blue);
+            margin-bottom: 14px;
+            display: block;
+            letter-spacing: 0.3px;
+            opacity: 0.9;
+        }
+
+        .leave-form-field {
+            margin-bottom: 14px;
+        }
+
+        .leave-form-field:last-child {
+            margin-bottom: 0;
+        }
+
+        .leave-form-field label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--ts);
+            margin-bottom: 7px;
+            padding-left: 2px;
+        }
+
+        .leave-input {
+            width: 100%;
+            height: 52px;
+            /* Professional touch height */
+            padding: 0 16px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            font-family: inherit;
+            font-size: 14.5px;
+            font-weight: 500;
+            outline: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--tp);
+        }
+
+        .leave-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 4px rgba(26, 79, 219, 0.1);
+        }
+
+        .leave-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-submit-leave {
+            width: 100%;
+            height: 56px;
+            border-radius: 18px;
+            border: none;
+            background: var(--blue);
+            color: #fff;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(26, 79, 219, 0.35);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-submit-leave:active {
+            transform: scale(0.98);
+        }
+
+        .btn-submit-leave:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* Student List Modal Specifics */
+        .student-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 27, 62, 0.4);
+            backdrop-filter: blur(12px);
+            z-index: 3000;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .student-modal.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .student-modal-card {
+            background: #fff;
+            border-radius: 28px 28px 0 0;
+            width: 100%;
+            max-width: 480px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+        }
+
+        .student-modal.show .student-modal-card {
+            transform: translateY(0);
+        }
+
+        .student-modal-header {
+            padding: 24px 24px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .student-list-container {
+            padding: 16px 20px 100px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .student-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px;
+            border-radius: 18px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            margin-bottom: 12px;
+            transition: transform 0.15s;
+        }
+
+        .student-item:active {
+            transform: scale(0.98);
+        }
+
+        .student-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            background: var(--blue-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .student-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .student-avatar span {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        .student-details {
+            flex: 1;
+        }
+
+        .student-name {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: var(--tp);
+            margin-bottom: 2px;
+        }
+
+        .student-meta {
+            font-size: 11px;
+            color: var(--ts);
+            font-weight: 500;
+        }
+
+        .modal-close-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: var(--bg);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--ts);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="top-strip"></div>
+    <div class="page">
+        <div class="header">
+            <div>
+                <p class="header-greeting" id="greeting"
+                    style="font-size: 12.5px; font-weight: 500; color: var(--tm); margin-bottom: 3px;">Good evening,
+                    Teacher 👋</p>
+                <h1 class="header-title"
+                    style="font-size: 22px; font-weight: 800; color: var(--tp); letter-spacing: -0.4px;">Teacher
+                    Dashboard</h1>
+                <p class="header-sub" style="font-size: 13px; color: var(--ts); margin-top: 2px;">Your Assigned Subjects
+                </p>
+            </div>
+            <div class="header-actions">
+                <div class="notif-bell-wrapper" onclick="window.location.href='notifications.html'">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    <div id="notif-badge" class="notif-badge"></div>
+                </div>
+                <button class="btn-signout-top" onclick="handleSignOut()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                    </svg>
+                    Sign Out
+                </button>
+                <div class="avatar" id="avatarEl">T</div>
+            </div>
+        </div>
+
+
+        <!-- VIEW: DASHBOARD -->
+        <div id="view-dashboard" class="tab-view active">
+            <!-- Stats Row -->
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; padding:0 20px 16px;">
+                <div style="background:rgba(26, 79, 219, 0.05); border-radius:18px; padding:12px; text-align:center;">
+                    <div id="stat-subjects" style="font-size:18px; font-weight:800; color:var(--blue);">0</div>
+                    <div
+                        style="font-size:9px; font-weight:700; color:var(--ts); text-transform:uppercase; margin-top:4px;">
+                        Subjects</div>
+                </div>
+                <div style="background:rgba(18, 183, 106, 0.05); border-radius:18px; padding:12px; text-align:center;">
+                    <div id="stat-classes" style="font-size:18px; font-weight:800; color:var(--green);">0</div>
+                    <div
+                        style="font-size:9px; font-weight:700; color:var(--ts); text-transform:uppercase; margin-top:4px;">
+                        Today's Classes</div>
+                </div>
+                <div onclick="openStudentList()" style="background:rgba(245, 158, 11, 0.05); border-radius:18px; padding:12px; text-align:center; cursor:pointer; transition:transform 0.15s;" onactive="this.style.transform='scale(0.95)'">
+                    <div id="stat-students" style="font-size:18px; font-weight:800; color:#f59e0b;">0</div>
+                    <div
+                        style="font-size:9px; font-weight:700; color:var(--ts); text-transform:uppercase; margin-top:4px;">
+                        Total Students</div>
+                </div>
+            </div>
+
+            <div class="section-head">
+                <h2>Today's Schedule</h2>
+            </div>
+            <div id="todayScheduleList" class="card-list" style="padding-bottom:10px;">
+                <p style="text-align:center; color:var(--tm); font-size:12px; padding:20px;">No classes scheduled for
+                    today.</p>
+            </div>
+
+            <div class="section-head">
+                <h2>Assigned Subjects</h2>
+            </div>
+            <div class="card-list" id="subjectList">
+                <div class="skeleton skel-card"></div>
+                <div class="skeleton skel-card"></div>
+                <div class="skeleton skel-card"></div>
+            </div>
+        </div>
+
+        <!-- VIEW: LEAVE -->
+        <div id="view-leave" class="tab-view" style="display:none;">
+            <div class="page-header">
+                <h2>Request Leave</h2>
+            </div>
+            <!-- Form Integrated directly into page -->
+            <form id="leaveForm" onsubmit="event.preventDefault(); return false;">
+                <div id="leave-page-content" style="padding: 0 20px 100px;">
+                    <!-- Section 1: Leave Details -->
+                    <div class="leave-section"
+                        style="background:rgba(26, 79, 219, 0.03); border-radius: 22px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(26, 79, 219, 0.05);">
+                        <span class="section-label"
+                            style="font-size: 11px; font-weight: 800; color: var(--blue); margin-bottom: 12px; display: block; letter-spacing: 0.3px; opacity: 0.9;">LEAVE
+                            DETAILS</span>
+                        <div class="leave-form-field" style="margin-bottom: 12px;">
+                            <label
+                                style="display: block; font-size: 10px; font-weight: 700; color: var(--ts); margin-bottom: 6px; padding-left: 2px;">Reason
+                                for Leave</label>
+                            <select id="leaveReason" class="leave-input"
+                                style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 14.5px; font-weight: 500; color: var(--tp);">
+                                <option value="Health Issue">Health Issue</option>
+                                <option value="Personal Work">Personal Work</option>
+                                <option value="Emergency">Emergency</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="leave-form-field" style="margin-bottom: 12px;">
+                            <label
+                                style="display: block; font-size: 10px; font-weight: 700; color: var(--ts); margin-bottom: 6px; padding-left: 2px;">Leave
+                                Type</label>
+                            <select id="leaveType" class="leave-input" onchange="toggleLeaveFields()"
+                                style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 14.5px; font-weight: 500; color: var(--tp);">
+                                <option value="one_day">Full Day</option>
+                                <option value="half_day">Half Day</option>
+                                <option value="multiple_days">Multiple Days</option>
+                            </select>
+                        </div>
+
+                        <div class="leave-form-field" id="customReasonField" style="display:none; margin-bottom: 12px;">
+                            <label
+                                style="display: block; font-size: 10px; font-weight: 700; color: var(--ts); margin-bottom: 6px; padding-left: 2px;">Specify
+                                Reason</label>
+                            <input type="text" id="customReason" class="leave-input" placeholder="e.g. Family emergency"
+                                style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 14.5px; font-weight: 500; color: var(--tp);" />
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Schedule -->
+                    <div class="leave-section"
+                        style="background:rgba(26, 79, 219, 0.03); border-radius: 22px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(26, 79, 219, 0.05);">
+                        <span class="section-label"
+                            style="font-size: 11px; font-weight: 800; color: var(--blue); margin-bottom: 12px; display: block; letter-spacing: 0.3px; opacity: 0.9;">SCHEDULE</span>
+                        <div id="halfDayField" class="leave-form-field" style="display:none; margin-bottom: 12px;">
+                            <label
+                                style="display: block; font-size: 10px; font-weight: 700; color: var(--ts); margin-bottom: 6px; padding-left: 2px;">Session</label>
+                            <select id="halfDaySession" class="leave-input"
+                                style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 14.5px; font-weight: 500; color: var(--tp);">
+                                <option value="morning">Morning (P1-P3)</option>
+                                <option value="afternoon">Afternoon (P4-P6)</option>
+                            </select>
+                        </div>
+
+                        <div class="leave-form-field" style="margin-bottom: 12px;">
+                            <label id="dateLabel"
+                                style="display: block; font-size: 10px; font-weight: 700; color: var(--ts); margin-bottom: 6px; padding-left: 2px;">Date</label>
+                            <input type="date" id="startDate" class="leave-input"
+                                style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 14.5px; font-weight: 500; color: var(--tp);" />
+                        </div>
+
+                        <div id="endDateField" class="leave-form-field" style="display:none; margin-bottom: 12px;">
+                            <label
+                                style="display: block; font-size: 10px; font-weight: 700; color: var(--ts); margin-bottom: 6px; padding-left: 2px;">End
+                                Date</label>
+                            <input type="date" id="endDate" class="leave-input"
+                                style="width: 100%; height: 50px; padding: 0 16px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; font-family: inherit; font-size: 14.5px; font-weight: 500; color: var(--tp);" />
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <button class="btn-submit-leave" id="btnAction" onclick="handleContinueClick()"
+                            style="width: 100%; height: 56px; border-radius: 18px; border: none; background: var(--blue); color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 25px rgba(26, 79, 219, 0.35); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center;">
+                            Continue
+                        </button>
+                    </div>
+
+                    <!-- Section 3: Affected Periods -->
+                    <div id="affectedClassesContainer" class="leave-section"
+                        style="display:none; background:rgba(26, 79, 219, 0.03); border-radius: 22px; padding: 18px; margin-bottom: 24px; border: 1px solid rgba(26, 79, 219, 0.05);">
+                        <span class="section-label"
+                            style="font-size: 11.5px; font-weight: 800; color: var(--blue); margin-bottom: 14px; display: block; letter-spacing: 0.3px; opacity: 0.9;">Affected
+                            Periods</span>
+                        <div id="affectedClassesList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    </div>
+
+                    <div class="page-header" style="padding: 10px 0;">
+                        <h2>Leave History</h2>
+                    </div>
+                    <div id="leaveHistory" class="card-list" style="padding:0;">
+                        <p style="text-align:center; color:var(--tm); font-size:13px; padding:20px;">Your leave history
+                            will
+                            appear here.</p>
+                    </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- VIEW: REQUESTS -->
+    <div id="view-requests" class="tab-view" style="display:none;">
+        <div class="page-header">
+            <h2>Replacement Requests</h2>
+        </div>
+        <div id="requestList" class="card-list">
+            <p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">No pending replacement
+                requests.</p>
+        </div>
+    </div>
+
+    <!-- VIEW: ATTENDANCE -->
+    <div id="view-attendance" class="tab-view" style="display:none;">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Attendance Insights</h2>
+        </div>
+
+        <div id="attendance-list-view">
+            <div class="section-head">
+                <h2>Select Subject</h2>
+            </div>
+            <div id="attendanceSubjectList" class="card-list">
+                <div class="skeleton skel-card"></div>
+                <div class="skeleton skel-card"></div>
+            </div>
+        </div>
+
+        <div id="attendance-detail-view" style="display:none;">
+            <!-- Detail view for a specific subject -->
+            <div class="page-header" style="display:flex; align-items:center; gap:12px; padding-bottom:0;">
+                <button onclick="showAttendanceList()"
+                    style="background:none; border:none; color:var(--blue); font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M19 12H5M12 5l-7 7 7 7" />
+                    </svg>
+                    Back
+                </button>
+                <h2 id="attSubjectName" style="font-size:16px;">Subject Name</h2>
+            </div>
+
+            <div style="padding: 0 20px 20px;">
+                <!-- View Toggle -->
+                <div
+                    style="display:flex; background:rgba(26, 79, 219, 0.05); border-radius:14px; padding:4px; margin: 16px 0;">
+                    <button id="toggleWeekly" onclick="switchAttendanceMode('weekly')"
+                        style="flex:1; padding:8px; border:none; border-radius:11px; font-size:12px; font-weight:700; cursor:pointer; background:var(--blue); color:#fff;">Weekly</button>
+                    <button id="toggleMonthly" onclick="switchAttendanceMode('monthly')"
+                        style="flex:1; padding:8px; border:none; border-radius:11px; font-size:12px; font-weight:700; cursor:pointer; background:transparent; color:var(--ts);">Monthly</button>
+                </div>
+
+                <div id="weeklyContent">
+                    <!-- Weekly grouped stats -->
+                </div>
+
+                <div id="monthlyContent" style="display:none;">
+                    <!-- Monthly progress + student list -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+
+    <!-- Replacements Modal -->
+    <div class="leave-modal" id="replacementsModal" onclick="if(event.target===this) closeReplacementsModal()">
+        <div class="leave-card">
+            <div class="drag-handle"></div>
+            <div class="leave-head">
+                <div class="leave-title">Manage Replacements</div>
+                <button class="leave-close" onclick="closeReplacementsModal()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="leave-body">
+                <div id="replacementList">
+                    <!-- Classes needing replacement will appear here -->
+                    <p style="text-align:center; color:var(--tm); font-size:13px; padding:20px;">Loading affected
+                        classes...
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student List Modal -->
+    <div class="student-modal" id="studentModal" onclick="if(event.target===this) closeStudentModal()">
+        <div class="student-modal-card">
+            <div class="student-modal-header">
+                <div>
+                    <h3 style="font-size: 18px; font-weight: 800; color: var(--tp); letter-spacing: -0.4px;">My Students</h3>
+                    <p id="studentModalSub" style="font-size: 11px; color: var(--ts); margin-top: 2px;">Loading students...</p>
+                </div>
+                <button class="modal-close-btn" onclick="closeStudentModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="student-list-container" id="studentModalList">
+                <p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">Fetching student directory...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Delete Modal -->
+    <div id="deleteModal" class="modal-overlay" onclick="if(event.target===this) closeDeleteModal()">
+        <div class="confirm-card">
+            <div class="confirm-icon">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path
+                        d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+                    </path>
+                </svg>
+            </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--tp); margin-bottom: 8px;">Cancel Request?</h3>
+            <p style="font-size: 13px; color: var(--ts); line-height: 1.5; margin-bottom: 24px;">Are you sure you want
+                to cancel this leave request? This action cannot be undone.</p>
+            <div style="display: flex; gap: 12px;">
+                <button onclick="closeDeleteModal()"
+                    style="flex: 1; height: 50px; border-radius: 14px; border: 1.5px solid var(--border); background: #fff; color: var(--ts); font-size: 14px; font-weight: 700; cursor: pointer;">Cancel</button>
+                <button onclick="confirmDelete()"
+                    style="flex: 1; height: 50px; border-radius: 14px; border: none; background: #ff4d4f; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 20px rgba(255, 77, 79, 0.3);">Yes,
+                    Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('dashboard')">
+            <div class="nav-icon"><svg viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg></div>
+            <span class="nav-label">Dashboard</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('leave')">
+            <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                </svg></div>
+            <span class="nav-label">Leave</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('requests')">
+            <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg></div>
+            <span class="nav-label">Requests</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('attendance')">
+            <div class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M9 11l3 3L22 4" />
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg></div>
+            <span class="nav-label">Attendance</span>
+        </div>
+    </nav>
+
+    <script>
+        const ICONS = {
+            'AI Fundamentals': { bg: '#e8f0ff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#1a4fdb" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>` },
+            'Machine Learning': { bg: '#edfaf3', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#12b76a" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>` },
+            'Data Structures': { bg: '#fff8ec', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9M3 13v4c0 1.66 4 3 9 3s9-1.34 9-3v-4"/></svg>` },
+            'Neural Networks': { bg: '#f5eeff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="2"/><circle cx="20" cy="6" r="2"/><circle cx="4" cy="18" r="2"/><circle cx="20" cy="18" r="2"/><path d="M6 6.5L9.5 9.5M14.5 14.5L18 17.5M18 6.5L14.5 9.5M9.5 14.5L6 17.5"/></svg>` }
+        };
+
+        let currentUser = null;
+        let subjects = [];
+
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['teacher']);
+            if (!session) return;
+            currentUser = session.user;
+
+            // Set greeting
+            const h = new Date().getHours();
+            const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+            document.getElementById('greeting').textContent = `${g}, Teacher 👋`;
+
+            // Set avatar initials from Google name
+            const user = session.user;
+            localStorage.setItem('user_role', 'teacher');
+            const meta = user.user_metadata;
+            if (meta?.full_name || meta?.name) {
+                const n = (meta.full_name || meta.name).split(' ');
+                document.getElementById('avatarEl').textContent = (n[0][0] + (n[1]?.[0] || '')).toUpperCase();
+            }
+
+            await loadSubjects();
+            await loadPendingRequests();
+            await loadTodaysSchedule();
+
+            // Enable Realtime for Leaves
+            const leaveChannel = sb.channel('leave_requests_live')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'leave_requests' }, payload => {
+                    if (payload.eventType === 'INSERT') {
+                        // Only add if it belongs to this teacher and not already rendered
+                        if (payload.new.teacher_id === teacherData?.id) {
+                            addLeaveCard(payload.new);
+                        }
+                    } else if (payload.eventType === 'UPDATE') {
+                        if (payload.new.teacher_id === teacherData?.id) {
+                            updateLeaveStatus(payload.new);
+                        }
+                    } else if (payload.eventType === 'DELETE') {
+                        removeLeaveCard(payload.old.id);
+                    }
+                })
+                .subscribe();
+
+            // Enable Realtime for Replacement Requests
+            const requestChannel = sb.channel('request_updates')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'teacher_requests' }, payload => {
+                    console.log('Realtime Request Change:', payload);
+                    if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+                        if (payload.new?.to_teacher_id === teacherData.id || payload.old?.to_teacher_id === teacherData.id) {
+                            loadPendingRequests();
+                        }
+                    }
+                })
+                .subscribe();
+        });
+
+        async function loadPendingRequests() {
+            if (!teacherData) {
+                const email = currentUser.email?.toLowerCase().trim();
+                const { data } = await sb.from('authorized_teachers').select('id, name').eq('email', email).maybeSingle();
+                teacherData = data;
+            }
+            if (!teacherData) return;
+
+            const { data: requests, error } = await sb.from('teacher_requests')
+                .select('*, from_teacher:from_teacher_id(name), subject:subject_id(name)')
+                .eq('to_teacher_id', teacherData.id)
+                .eq('status', 'pending');
+
+            const list = document.getElementById('requestList');
+
+            if (!requests || requests.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">No pending replacement requests.</p>';
+                return;
+            }
+
+            list.innerHTML = requests.map(r => {
+                const head = escapeHTML(r.from_teacher?.name || 'Teacher');
+                const subName = escapeHTML(r.subject?.name || 'Subject');
+                const periodNum = escapeHTML(r.period);
+                const dateStr = new Date(r.date).toLocaleDateString();
+
+                return `
+                <div style="background:#fffbeb; border:1px solid #fef3c7; border-radius:18px; padding:16px; box-shadow:0 4px 12px rgba(217,119,6,0.08);">
+                    <div style="font-size:13px; font-weight:700; color:#92400e; margin-bottom:4px;">Request from ${head}</div>
+                    <div style="font-size:12px; color:#b45309; margin-bottom:12px;">Cover <b>${subName}</b> on ${dateStr} (Period ${periodNum})?</div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="handleRequest('${r.id}', 'accepted')" style="flex:1; padding:10px; border-radius:10px; border:none; background:#d97706; color:#fff; font-size:12px; font-weight:700; cursor:pointer;">Accept</button>
+                        <button onclick="handleRequest('${r.id}', 'rejected')" style="flex:1; padding:10px; border-radius:10px; border:1px solid #fcd34d; background:transparent; color:#92400e; font-size:12px; font-weight:700; cursor:pointer;">Decline</button>
+                    </div>
+                </div>
+            `;}).join('');
+        }
+
+        function switchTab(tabId) {
+            // Update Navigation UI
+            document.querySelectorAll('.nav-item').forEach(item => {
+                const label = item.querySelector('.nav-label').textContent.toLowerCase();
+                if (label === tabId) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // Update View Visibility
+            document.querySelectorAll('.tab-view').forEach(view => {
+                if (view.id === `view-${tabId}`) {
+                    view.style.display = 'block';
+                } else {
+                    view.style.display = 'none';
+                }
+            });
+
+            // Specific data loads
+            if (tabId === 'requests') loadPendingRequests();
+            if (tabId === 'leave') loadLeaveHistory();
+            if (tabId === 'attendance') loadAttendanceSubjects();
+        }
+
+
+        async function handleRequest(requestId, status) {
+            try {
+                const { data: req, error: uErr } = await sb.from('teacher_requests')
+                    .update({ status })
+                    .eq('id', requestId)
+                    .select()
+                    .single();
+
+                if (uErr) throw uErr;
+
+                if (status === 'accepted') {
+                    // Update the class map to 'assigned'
+                    await sb.from('leave_class_map')
+                        .update({
+                            status: 'assigned',
+                            assigned_teacher_id: teacherData.id
+                        })
+                        .eq('id', req.leave_id);
+
+                    showSuccess('Replacement accepted!');
+                } else {
+                    showInfo('Request declined');
+                }
+
+                loadPendingRequests();
+
+            } catch (err) {
+                console.error(err);
+                showError('Action failed');
+            }
+        }
+
+        async function loadSubjects() {
+            if (!teacherData) {
+                // Try from localStorage first
+                const storedId = localStorage.getItem('teacher_id');
+                if (storedId) {
+                    const { data: tRow } = await sb.from('authorized_teachers').select('id, name').eq('id', storedId).maybeSingle();
+                    teacherData = tRow;
+                }
+
+                // Fallback to email if not found
+                if (!teacherData && currentUser) {
+                    const email = currentUser.email?.toLowerCase().trim();
+                    const { data: tRow } = await sb.from('authorized_teachers').select('id, name').eq('email', email).maybeSingle();
+                    teacherData = tRow;
+                }
+            }
+            if (!teacherData) return;
+
+            // Update greeting with teacher's name
+            const firstName = teacherData.name.split(' ')[0];
+            const h = new Date().getHours();
+            const g = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+            document.getElementById('greeting').textContent = `${g}, ${firstName} 👋`;
+
+            // Load assigned subjects via teacher_subject_assignments
+            const { data, error } = await sb
+                .from('teacher_subject_assignments')
+                .select(`
+                    id,
+                    section,
+                    subjects:subject_id (
+                        id,
+                        name,
+                        year,
+                        semester,
+                        branch,
+                        code
+                    )
+                `)
+                .eq('teacher_id', teacherData.id);
+
+            if (error) { console.error(error); return; }
+
+            // Flatten data and ensure deterministic labels
+            subjects = (data || []).map(row => {
+                const s = row.subjects;
+                if (!s) return null;
+                return {
+                    id: s.id,
+                    assignment_id: row.id,
+                    name: s.name,
+                    year: s.year,
+                    semester: s.semester,
+                    branch: s.branch,
+                    code: s.code,
+                    section: row.section || 'NONE'
+                };
+            }).filter(s => s !== null).sort((a, b) => a.year - b.year || a.semester - b.semester || a.name.localeCompare(b.name));
+
+            renderCards();
+
+            // Update Stats
+            document.getElementById('stat-subjects').textContent = subjects.length;
+
+            // Calculate unique students across all assigned sections
+            const countedKeys = new Set();
+            const uniqueSections = [];
+
+            subjects.forEach(s => {
+                const sec = s.section || 'NONE';
+                const key = `${s.year}_${s.semester}_${s.branch}_${sec}`.toLowerCase();
+                if (!countedKeys.has(key)) {
+                    countedKeys.add(key);
+                    uniqueSections.push({
+                        year: s.year, semester: s.semester, branch: s.branch, section: sec
+                    });
+                }
+            });
+
+            if (uniqueSections.length > 0) {
+                let totalCount = 0;
+                // Fetch student counts for each unique class section
+                const results = await Promise.all(uniqueSections.map(async (cls) => {
+                    let query = sb.from('students')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('year', cls.year)
+                        .eq('semester', cls.semester)
+                        .eq('branch', cls.branch);
+                    
+                    if (cls.section && cls.section !== 'NONE') {
+                        query = query.eq('section', cls.section);
+                    }
+                    
+                    const { count, error } = await query;
+                    if (error) console.error('Count Error:', error);
+                    return count || 0;
+                }));
+                totalCount = results.reduce((a, b) => a + b, 0);
+                document.getElementById('stat-students').textContent = totalCount;
+            } else {
+                document.getElementById('stat-students').textContent = 0;
+            }
+        }
+
+        function yearLabel(y) {
+            // Convert to string for comparison to handle both number and string types
+            const ys = String(y);
+            return ys === '1' ? '1st Year' : ys === '2' ? '2nd Year' : ys === '3' ? '3rd Year' : `${ys}th Year`;
+        }
+
+        function renderCards() {
+            const list = document.getElementById('subjectList');
+            if (!subjects.length) {
+                list.innerHTML = '<p style="text-align:center;color:var(--tm);padding:40px;font-size:13px">No subjects found</p>';
+                return;
+            }
+            list.innerHTML = subjects.map((s, i) => {
+                const ic = ICONS[s.name] || { bg: '#e8f0ff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#1a4fdb" stroke-width="1.8"><circle cx="12" cy="12" r="6"/></svg>` };
+                
+                const nameEsc = escapeHTML(s.name);
+                const codeEsc = escapeHTML(s.code);
+                const branchEsc = escapeHTML(s.branch);
+                const sectionEsc = escapeHTML(s.section || 'NONE');
+                const yearLabelEsc = escapeHTML(yearLabel(s.year));
+                const semesterEsc = escapeHTML(s.semester);
+
+                return `
+        <div class="subject-card" style="animation-delay:${i * 0.06}s">
+          <div class="card-top">
+            <div class="subject-icon" style="background:${ic.bg}">${ic.svg}</div>
+            <div class="subject-info">
+              <div class="subject-name">${nameEsc}</div>
+              <div class="tag-row">
+                <span class="tag">${yearLabelEsc}</span>
+                <span class="tag">Sem ${semesterEsc}</span>
+                <span class="tag">${branchEsc}</span>
+                ${sectionEsc !== 'NONE' ? `<span class="tag">Sec ${sectionEsc}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="card-divider"></div>
+          <div class="card-bottom">
+            <div class="class-info">
+              <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10"/></svg>
+              <span>Code: ${codeEsc}</span>
+            </div>
+          </div>
+        </div>`;
+            }).join('');
+        }
+
+        function goToSession(id, name, year, semester, branch, section, start = null, end = null) {
+            const btn = event.target.closest('.btn-attend');
+            btn.style.transform = 'scale(0.95)';
+            const sp = start ? `&start_period=${start}` : '';
+            const ep = end ? `&end_period=${end}` : '';
+            setTimeout(() => {
+                window.location.href = `attendance_session.html?subject_id=${id}&name=${encodeURIComponent(name)}&year=${year}&semester=${semester}&branch=${encodeURIComponent(branch)}&section=${encodeURIComponent(section)}${sp}${ep}`;
+            }, 180);
+        }
+
+        async function handleSignOut() {
+            await sb.auth.signOut();
+            window.location.href = 'login.html';
+        }
+
+        async function openStudentList() {
+            const modal = document.getElementById('studentModal');
+            const list = document.getElementById('studentModalList');
+            const sub = document.getElementById('studentModalSub');
+            modal.classList.add('show');
+            list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">Fetching student directory...</p>';
+
+            if (subjects.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">No subjects assigned.</p>';
+                sub.textContent = '0 students';
+                return;
+            }
+
+            try {
+                // Collect all unique section filters
+                const countedKeys = new Set();
+                const uniqueSections = [];
+
+                subjects.forEach(s => {
+                    const sec = s.section || 'NONE';
+                    const key = `${s.year}_${s.semester}_${s.branch}_${sec}`.toLowerCase();
+                    if (!countedKeys.has(key)) {
+                        countedKeys.add(key);
+                        uniqueSections.push({
+                            year: s.year, semester: s.semester, branch: s.branch, section: sec
+                        });
+                    }
+                });
+
+                // Fetch students for each class
+                const results = await Promise.all(uniqueSections.map(async (cls) => {
+                    let query = sb.from('students')
+                        .select('name, roll_number, branch, section, face_image_url')
+                        .eq('year', cls.year)
+                        .eq('semester', cls.semester)
+                        .eq('branch', cls.branch);
+                    
+                    if (cls.section && cls.section !== 'NONE') {
+                        query = query.eq('section', cls.section);
+                    }
+                    
+                    const { data } = await query.order('roll_number');
+                    return data || [];
+                }));
+
+                const allStudents = results.flat().sort((a,b) => a.name.localeCompare(b.name));
+                sub.textContent = `${allStudents.length} Students across your sections`;
+
+                if (allStudents.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">No students found in these classes.</p>';
+                    return;
+                }
+
+                list.innerHTML = allStudents.map(s => {
+                    const initials = s.name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+                    const nameEsc = escapeHTML(s.name);
+                    const rollEsc = escapeHTML(s.roll_number);
+                    const branchEsc = escapeHTML(s.branch);
+                    const sectionEsc = escapeHTML(s.section || 'No Sec');
+                    const initialsEsc = escapeHTML(initials);
+                    const photoUrl = s.face_image_url ? escapeHTML(s.face_image_url) : null;
+
+                    return `
+                        <div class="student-item">
+                            <div class="student-avatar">
+                                ${photoUrl ? `<img src="${photoUrl}" alt="${nameEsc}">` : `<span>${initialsEsc}</span>`}
+                            </div>
+                            <div class="student-details">
+                                <div class="student-name">${nameEsc}</div>
+                                <div class="student-meta">${rollEsc} · ${branchEsc} · ${sectionEsc}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (err) {
+                console.error(err);
+                list.innerHTML = '<p style="text-align:center; color:#e53e5a; font-size:13px; padding:40px;">Failed to load students.</p>';
+            }
+        }
+
+        function closeStudentModal() {
+            document.getElementById('studentModal').classList.remove('show');
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+            });
+        });
+
+        // ── LEAVE SYSTEM LOGIC ────────────────────────────────
+
+        let teacherData = null;
+
+        function openLeaveModal() {
+            const modal = document.getElementById('leaveModal');
+            modal.classList.add('show');
+            // Default to today
+            document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        function closeReplacementsModal() {
+            document.getElementById('replacementsModal').classList.remove('show');
+            // Reset button states when closing the modal
+            document.getElementById('btnLoadClasses').style.display = 'block';
+            document.getElementById('btnLoadClasses').disabled = false;
+            document.getElementById('btnLoadClasses').textContent = "Fetch Affected Classes";
+            document.getElementById('affectedClassesContainer').style.display = 'none';
+            document.getElementById('btnSubmitLeave').style.display = 'none';
+            pendingReplacementAssignments = {}; // Clear pending assignments
+        }
+
+        function closeLeaveModal() {
+            document.getElementById('leaveModal').classList.remove('show');
+            // Reset button states when closing the modal
+            document.getElementById('btnLoadClasses').style.display = 'block';
+            document.getElementById('btnLoadClasses').disabled = false;
+            document.getElementById('btnLoadClasses').textContent = "Fetch Affected Classes";
+            document.getElementById('affectedClassesContainer').style.display = 'none';
+            document.getElementById('btnSubmitLeave').style.display = 'none';
+            pendingReplacementAssignments = {}; // Clear pending assignments
+        }
+
+        function toggleLeaveFields() {
+            const type = document.getElementById('leaveType').value;
+            const reason = document.getElementById('leaveReason').value;
+
+            document.getElementById('halfDayField').style.display = type === 'half_day' ? 'block' : 'none';
+            document.getElementById('endDateField').style.display = type === 'multiple_days' ? 'block' : 'none';
+            document.getElementById('dateLabel').textContent = type === 'multiple_days' ? 'Start Date' : 'Date';
+
+            document.getElementById('customReasonField').style.display = reason === 'Other' ? 'block' : 'none';
+
+            // Reset mapping if fields change
+            document.getElementById('affectedClassesContainer').style.display = 'none';
+            document.getElementById('btnAction').textContent = "Continue";
+            pendingReplacementAssignments = {}; // Clear pending assignments
+        }
+
+        // Add event listener for reason change specifically
+        document.getElementById('leaveReason').addEventListener('change', toggleLeaveFields);
+
+        // Swipe down to close for Bottom Sheet
+        let touchStart = 0;
+        let touchEnd = 0;
+
+        document.querySelectorAll('.leave-card').forEach(card => {
+            card.addEventListener('touchstart', e => {
+                touchStart = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            card.addEventListener('touchend', e => {
+                touchEnd = e.changedTouches[0].screenY;
+                if (touchEnd - touchStart > 100) { // Swiped down more than 100px
+                    const modalId = card.closest('.leave-modal, .student-modal').id;
+                    if (modalId === 'leaveModal') closeLeaveModal();
+                    else if (modalId === 'replacementsModal') closeReplacementsModal();
+                    else if (modalId === 'studentModal') closeStudentModal();
+                }
+            }, { passive: true });
+        });
+
+        async function loadTodaysSchedule() {
+            const schedList = document.getElementById('todayScheduleList');
+
+            try {
+                if (!teacherData) return;
+                const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                const dayName = days[new Date().getDay()];
+                const { data: schedule } = await sb.from('timetable')
+                    .select('*, subject:subject_id(name)')
+                    .eq('teacher_id', teacherData.id)
+                    .eq('day', dayName);
+
+                if (schedule && schedule.length > 0) {
+                    // Sorting and grouping
+                    const sorted = schedule.sort((a, b) => {
+                        const p1 = parseInt(a.period.replace('P', ''));
+                        const p2 = parseInt(b.period.replace('P', ''));
+                        return p1 - p2;
+                    });
+
+                    const grouped = [];
+                    sorted.forEach(s => {
+                        const last = grouped[grouped.length - 1];
+                        const pNum = parseInt(s.period.replace('P', ''));
+
+                        if (last &&
+                            last.subject_id === s.subject_id &&
+                            last.branch === s.branch &&
+                            last.year === s.year &&
+                            last.semester === s.semester &&
+                            last.section === s.section &&
+                            last.endPeriodNum === pNum - 1) {
+                            last.endPeriodNum = pNum;
+                            last.periods.push(s.period);
+                        } else {
+                            grouped.push({
+                                ...s,
+                                startPeriodNum: pNum,
+                                endPeriodNum: pNum,
+                                periods: [s.period]
+                            });
+                        }
+                    });
+
+                    schedList.innerHTML = grouped.map((s, i) => {
+                        const periodLabel = s.startPeriodNum === s.endPeriodNum
+                            ? `P${s.startPeriodNum}`
+                            : `P${s.startPeriodNum}–P${s.endPeriodNum}`;
+                        
+                        const subNameEsc = escapeHTML(s.subject?.name || 'Unknown Class');
+                        const branchEsc = escapeHTML(s.branch);
+                        const sectionEsc = escapeHTML(s.section || 'NONE');
+                        const periodLabelEsc = escapeHTML(periodLabel);
+
+                        return `
+                        <div class="subject-card" style="padding:16px; animation-delay:${i * 0.05}s">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+                                <div>
+                                    <div style="font-size:14px; font-weight:700; color:var(--tp);">${subNameEsc}</div>
+                                    <div style="font-size:11px; color:var(--ts);">${periodLabelEsc} · ${branchEsc}${sectionEsc !== 'NONE' ? ' · Sec ' + sectionEsc : ''}</div>
+                                </div>
+                                <div style="font-size:12px; font-weight:800; color:var(--blue);">${periodLabelEsc}</div>
+                            </div>
+                            <button class="btn-attend" onclick="goToSession('${s.subject_id}','${encodeURIComponent(s.subject?.name || 'Class')}','${s.year}','${s.semester}','${s.branch}','${s.section || ''}', ${s.startPeriodNum}, ${s.endPeriodNum})"
+                                style="width:100%; height:40px; border-radius:12px; font-size:12px; padding:0 12px;">
+                                <svg viewBox="0 0 24 24" style="width:16px; height:16px;"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                                Take Attendance
+                            </button>
+                        </div>
+                    `;
+                    }).join('');
+                } else {
+                    schedList.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:20px;">No classes today.</p>';
+                }
+
+                document.getElementById('stat-classes').textContent = schedule?.length || 0;
+            } catch (err) { console.error(err); }
+        }
+
+        let pendingReplacementAssignments = {};
+
+        function handleContinueClick() {
+            const btn = document.getElementById('btnAction');
+            if (btn.textContent.trim() === 'Continue') {
+                handleFetchClasses();
+            } else {
+                submitStrictLeave();
+            }
+        }
+
+        async function handleFetchClasses() {
+            const btn = document.getElementById('btnAction');
+            const type = document.getElementById('leaveType').value;
+            const rawDate = document.getElementById('startDate').value;
+            const session = document.getElementById('halfDaySession').value;
+
+            if (!rawDate) return showError("Please select a date");
+
+            // Helper to convert DD/MM/YYYY to YYYY-MM-DD
+            function formatDateToISO(dateStr) {
+                if (dateStr.includes('-')) return dateStr; // Already ISO
+                const parts = dateStr.split('/');
+                if (parts.length !== 3) return dateStr;
+                const dd = parts[0].padStart(2, '0');
+                const mm = parts[1].padStart(2, '0');
+                const yyyy = parts[2];
+                return `${yyyy}-${mm}-${dd}`;
+            }
+
+            const start = formatDateToISO(rawDate);
+
+            // Safety check for teacherData if not already loaded
+            if (!teacherData) {
+                console.log("Teacher data missing, fetching...");
+                const email = currentUser.email?.toLowerCase().trim();
+                const { data: teacherRow } = await sb
+                    .from('authorized_teachers')
+                    .select('id, name')
+                    .eq('email', email)
+                    .maybeSingle();
+                teacherData = teacherRow;
+            }
+
+            if (!teacherData) return showError("Teacher data not found. Please re-login.");
+
+            btn.disabled = true;
+            btn.textContent = "Fetching...";
+
+            try {
+                // IMPORTANT: Use local time parsing (append T00:00:00) to ensure the date matches the user's intent
+                const localDate = new Date(start + 'T00:00:00');
+                const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                const dayName = days[localDate.getDay()];
+
+                console.log(`DEBUG: Fetching classes for Teacher: ${teacherData.id}, Day: ${dayName}, Date: ${start}`);
+
+                const { data: schedule, error } = await sb.from('timetable')
+                    .select('*, subject:subject_id(name)')
+                    .eq('teacher_id', teacherData.id)
+                    .eq('day', dayName);
+
+                if (error) throw error;
+                console.log("DEBUG: Found classes:", schedule?.length || 0);
+
+                let filtered = schedule || [];
+                if (type === 'half_day') {
+                    filtered = filtered.filter(c => {
+                        const pNum = parseInt(c.period.replace('P', ''));
+                        if (session === 'morning') return pNum >= 1 && pNum <= 3;
+                        if (session === 'afternoon') return pNum >= 4 && pNum <= 6;
+                        return true;
+                    });
+                    console.log("DEBUG: Classes after half-day filter:", filtered.length);
+                }
+
+                const list = document.getElementById('affectedClassesList');
+                const container = document.getElementById('affectedClassesContainer');
+
+                if (filtered.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:12px; padding:20px;">No classes found for this date.</p>';
+                    btn.textContent = "Continue";
+                    btn.disabled = false;
+                } else {
+                    list.innerHTML = filtered.map((p, i) => {
+                        const subNameEsc = escapeHTML(p.subject?.name || 'Class');
+                        const periodEsc = escapeHTML(p.period);
+                        const branchEsc = escapeHTML(p.branch);
+                        const sectionEsc = escapeHTML(p.section || 'NONE');
+
+                        return `
+                        <div style="background:var(--bg); border:1px solid var(--border); border-radius:14px; padding:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:8px;">
+                                <div>
+                                    <div style="font-size:13px; font-weight:700; color:var(--tp);">${subNameEsc}</div>
+                                    <div style="font-size:11px; color:var(--ts);">${periodEsc} · ${branchEsc}${sectionEsc !== 'NONE' ? ' · Sec ' + sectionEsc : ''}</div>
+                                </div>
+                                <div id="status-${i}" style="font-size:10px; font-weight:700; color:var(--tm);">UNASSIGNED</div>
+                            </div>
+                            <button onclick="findReplacementsStrict('${i}', '${start}', '${p.period}', '${p.subject_id}')" 
+                                style="width:100%; padding:8px; border-radius:8px; border:1.5px dashed var(--blue-border); background:transparent; color:var(--blue); font-size:11px; font-weight:700; cursor:pointer;">
+                                Choose Replacement
+                            </button>
+                            <div id="reps-${i}" style="display:none; margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
+                        </div>
+                    `;}).join('');
+
+                    container.style.display = 'block';
+                    btn.textContent = "Send Requests";
+                    btn.disabled = false;
+                }
+
+                window.currentAffectedPeriods = filtered.map(f => ({ ...f, date: start }));
+                window.affectedClasses = filtered;
+            } catch (err) {
+                console.error(err);
+                showError("Failed to load schedule: " + err.message);
+                btn.textContent = "Continue";
+                btn.disabled = false;
+            }
+        }
+
+        async function findReplacementsStrict(idx, date, period, subjectId) {
+            const container = document.getElementById(`reps-${idx}`);
+            container.innerHTML = '<div style="grid-column: span 2; text-align:center; padding:10px; font-size:10px; color:var(--tm);">Checking availability...</div>';
+            container.style.display = 'grid';
+
+            try {
+                const { data: allTeachers } = await sb.from('authorized_teachers').select('id, name');
+                const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                const dayName = days[new Date(date).getDay()];
+
+                const { data: busyOnes } = await sb.from('timetable')
+                    .select('teacher_id')
+                    .eq('day', dayName)
+                    .eq('period', period);
+
+                const busyIds = new Set(busyOnes.map(b => b.teacher_id));
+
+                container.innerHTML = allTeachers
+                    .filter(t => t.id !== teacherData.id)
+                    .map(t => {
+                        const isBusy = busyIds.has(t.id);
+                        const nameEsc = escapeHTML(t.name.split(' ')[0]);
+                        return `
+                        <button 
+                            ${isBusy ? 'disabled' : `onclick="selectReplacement('${idx}', '${t.id}', '${t.name.replace(/'/g, "\\'")}')"`}
+                            style="padding:8px; border-radius:8px; border:none; background:${isBusy ? '#f1f5f9' : 'var(--blue-soft)'}; color:${isBusy ? '#94a3b8' : 'var(--blue)'}; font-size:10px; font-weight:700; cursor:${isBusy ? 'not-allowed' : 'pointer'};">
+                            ${nameEsc} ${isBusy ? '❌' : '✅'}
+                        </button>
+                    `}).join('');
+            } catch (err) {
+                container.innerHTML = '<div style="grid-column: span 2; color:red; font-size:10px;">Error finding teachers</div>';
+            }
+        }
+
+        function selectReplacement(idx, teacherId, teacherName) {
+            pendingReplacementAssignments[idx] = teacherId;
+            document.getElementById(`status-${idx}`).textContent = teacherName.split(' ')[0].toUpperCase();
+            document.getElementById(`status-${idx}`).style.color = 'var(--blue)';
+            document.getElementById(`reps-${idx}`).style.display = 'none';
+        }
+
+        async function submitStrictLeave() {
+            const btn = document.getElementById('btnAction');
+            const reason = document.getElementById('leaveReason').value === 'Other' ? document.getElementById('customReason').value : document.getElementById('leaveReason').value;
+            const type = document.getElementById('leaveType').value;
+            const start = document.getElementById('startDate').value;
+
+            if (!reason) return showError("Please provide a reason");
+            if (Object.keys(pendingReplacementAssignments).length === 0) return showError("Please select at least one replacement");
+
+            btn.disabled = true;
+            btn.textContent = "Submitting Requests...";
+
+            try {
+                const { data: leave, error: lErr } = await sb.from('leave_requests').insert({
+                    teacher_id: teacherData.id,
+                    leave_type: type,
+                    start_date: start,
+                    end_date: start,
+                    reason: reason,
+                    status: 'pending'
+                }).select().single();
+
+                if (lErr) throw lErr;
+
+                const requests = [];
+                for (const idx in pendingReplacementAssignments) {
+                    const p = window.currentAffectedPeriods[idx];
+                    requests.push({
+                        leave_id: leave.id,
+                        from_teacher_id: teacherData.id,
+                        to_teacher_id: pendingReplacementAssignments[idx],
+                        subject_id: p.subject_id,
+                        date: p.date,
+                        period: p.period,
+                        status: 'pending'
+                    });
+                }
+
+                await sb.from('teacher_requests').insert(requests);
+                // Reset form state
+                pendingReplacementAssignments = {};
+                document.getElementById('affectedClassesContainer').style.display = 'none';
+                document.getElementById('btnAction').textContent = 'Continue';
+                document.getElementById('leaveReason').value = '';
+                document.getElementById('customReason') && (document.getElementById('customReason').value = '');
+                document.getElementById('startDate').value = '';
+
+                // Add card instantly (Realtime will fire too, addLeaveCard deduplicates)
+                addLeaveCard(leave);
+                showConfirm('Requests sent to selected teachers!');
+
+                // Scroll to history
+                document.getElementById('leaveHistory').scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                console.error(err);
+                showError("Submission failed: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Submit All Requests";
+            }
+        }
+
+        // ── ATTENDANCE MODULE LOGIC ───────────────────────────
+
+        async function loadAttendanceSubjects() {
+            const list = document.getElementById('attendanceSubjectList');
+            if (subjects.length === 0) await loadDashboardData();
+
+            if (subjects.length === 0) {
+                list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">No subjects assigned.</p>';
+                return;
+            }
+
+            list.innerHTML = subjects.map(s => {
+                const nameEsc = escapeHTML(s.name);
+                const yearLabelEsc = escapeHTML(s.yearLabel);
+                const semEsc = escapeHTML(s.semester);
+                const branchEsc = escapeHTML(s.branch);
+
+                return `
+                <div class="subject-card" onclick="viewAttendanceDetail('${s.id}', '${s.name.replace(/'/g, "\\'")}')" style="display:flex; justify-content:space-between; align-items:center; padding:16px;">
+                    <div>
+                        <div style="font-size:14px; font-weight:700; color:var(--tp);">${nameEsc}</div>
+                        <div style="font-size:11px; color:var(--ts);">${yearLabelEsc} · Sem ${semEsc} · ${branchEsc}</div>
+                    </div>
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="var(--blue)" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+            `;}).join('');
+        }
+
+        let currentAttendanceSubject = null;
+        let attendanceData = [];
+
+        function showAttendanceList() {
+            document.getElementById('attendance-list-view').style.display = 'block';
+            document.getElementById('attendance-detail-view').style.display = 'none';
+        }
+
+        async function viewAttendanceDetail(id, name) {
+            currentAttendanceSubject = { id, name };
+            document.getElementById('attSubjectName').textContent = name;
+            document.getElementById('attendance-list-view').style.display = 'none';
+            document.getElementById('attendance-detail-view').style.display = 'block';
+            await fetchAttendanceData(id);
+            switchAttendanceMode('weekly');
+        }
+
+        async function fetchAttendanceData(subjectId) {
+            try {
+                const { data, error } = await sb.from('attendance')
+                    .select('*, period_count')
+                    .eq('subject_id', subjectId)
+                    .order('date', { ascending: false });
+                if (error) throw error;
+                attendanceData = data || [];
+            } catch (err) {
+                console.error(err);
+                showError("Failed to fetch attendance records.");
+            }
+        }
+
+        function switchAttendanceMode(mode) {
+            const wBtn = document.getElementById('toggleWeekly');
+            const mBtn = document.getElementById('toggleMonthly');
+            const wCont = document.getElementById('weeklyContent');
+            const mCont = document.getElementById('monthlyContent');
+
+            if (mode === 'weekly') {
+                wBtn.style.background = 'var(--blue)'; wBtn.style.color = '#fff';
+                mBtn.style.background = 'transparent'; mBtn.style.color = 'var(--ts)';
+                wCont.style.display = 'block'; mCont.style.display = 'none';
+                renderWeeklyAttendance();
+            } else {
+                mBtn.style.background = 'var(--blue)'; mBtn.style.color = '#fff';
+                wBtn.style.background = 'transparent'; wBtn.style.color = 'var(--ts)';
+                wCont.style.display = 'none'; mCont.style.display = 'block';
+                renderMonthlyAttendance();
+            }
+        }
+
+        function renderWeeklyAttendance() {
+            const cont = document.getElementById('weeklyContent');
+            if (attendanceData.length === 0) {
+                cont.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:12px; padding:40px;">No attendance records found.</p>';
+                return;
+            }
+            const grouped = {};
+            attendanceData.forEach(r => {
+                const count = r.period_count || 1;
+                if (!grouped[r.date]) grouped[r.date] = { p: 0, a: 0 };
+                if (r.status === 'present') grouped[r.date].p += count; else grouped[r.date].a += count;
+            });
+            cont.innerHTML = Object.keys(grouped).map(date => {
+                const stats = grouped[date];
+                const total = stats.p + stats.a;
+                const pct = Math.round((stats.p / total) * 100);
+                return `
+                    <div style="background:#fff; border:1px solid var(--border); border-radius:18px; padding:14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-size:13px; font-weight:700; color:var(--tp);">${new Date(date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</div>
+                            <div style="font-size:10px; color:var(--ts);">${total} Students</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:14px; font-weight:800; color:${pct >= 75 ? 'var(--green)' : pct >= 60 ? '#f59e0b' : 'var(--red)'};">${pct}%</div>
+                            <div style="font-size:10px; color:var(--tm);">${stats.p}P · ${stats.a}A</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function renderMonthlyAttendance() {
+            const cont = document.getElementById('monthlyContent');
+            if (attendanceData.length === 0) {
+                cont.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:12px; padding:40px;">No monthly data.</p>';
+                return;
+            }
+            const presentTotalCount = attendanceData.filter(r => r.status === 'present').length;
+            const totalWeightedCount = attendanceData.length;
+            const avgPct = totalWeightedCount > 0 ? Math.round((presentTotalCount / totalWeightedCount) * 100) : 0;
+            cont.innerHTML = `
+                <div style="background:linear-gradient(135deg, #1a4fdb, #2a62f0); border-radius:24px; padding:24px; color:#fff; text-align:center; margin-bottom:20px;">
+                    <div style="font-size:12px; opacity:0.8; margin-bottom:4px;">Average Attendance</div>
+                    <div style="font-size:36px; font-weight:800;">${avgPct}%</div>
+                    <div style="font-size:11px; opacity:0.8; margin-top:4px;">Across ${new Set(attendanceData.map(r => r.date)).size} sessions</div>
+                </div>
+                <div id="monthlyStudentStats"></div>
+            `;
+            const statsCont = document.getElementById('monthlyStudentStats');
+            const studentStats = {};
+            attendanceData.forEach(r => {
+                if (!studentStats[r.student_id]) studentStats[r.student_id] = { p: 0, t: 0 };
+                studentStats[r.student_id].t += 1;
+                if (r.status === 'present') studentStats[r.student_id].p += 1;
+            });
+            const sIds = Object.keys(studentStats);
+            const { data: students } = await sb.from('students').select('id, name, roll_number').in('id', sIds);
+            const sorted = (students || []).map(s => {
+                const stats = studentStats[s.id];
+                return { ...s, pct: Math.round((stats.p / stats.t) * 100), ...stats };
+            }).sort((a, b) => b.pct - a.pct);
+            statsCont.innerHTML = sorted.map((s, i) => {
+                const nameEsc = escapeHTML(s.name);
+                const rollEsc = escapeHTML(s.roll_number);
+                return `
+                <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
+                    <div style="width:24px; font-size:11px; font-weight:700; color:var(--tm);">${i + 1}</div>
+                    <div style="flex:1;">
+                        <div style="font-size:13px; font-weight:700; color:var(--tp);">${nameEsc}</div>
+                        <div style="font-size:10px; color:var(--ts);">${rollEsc}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:13px; font-weight:800; color:${s.pct >= 75 ? 'var(--green)' : s.pct >= 60 ? '#f59e0b' : 'var(--red)'};">${s.pct}%</div>
+                    </div>
+                </div>
+            `;}).join('');
+        }
+
+        async function handleRequest(requestId, status) {
+            try {
+                const { data: req, error: uErr } = await sb.from('teacher_requests')
+                    .update({ status })
+                    .eq('id', requestId)
+                    .select('*, subject:subject_id(name)')
+                    .single();
+
+                if (uErr) throw uErr;
+
+                if (status === 'accepted') {
+                    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                    const dayName = days[new Date(req.date).getDay()];
+
+                    await sb.from('timetable')
+                        .update({ teacher_id: req.to_teacher_id })
+                        .eq('day', dayName)
+                        .eq('period', req.period)
+                        .eq('subject_id', req.subject_id)
+                        .eq('teacher_id', req.from_teacher_id);
+
+                    // Update parent leave status to approved
+                    await sb.from('leave_requests').update({ status: 'approved' }).eq('id', req.leave_id);
+
+                    showConfirm("Request accepted and timetable updated!");
+                } else {
+                    // Update parent leave status to rejected
+                    await sb.from('leave_requests').update({ status: 'rejected' }).eq('id', req.leave_id);
+                    showConfirm("Request declined.");
+                }
+                loadPendingRequests();
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadPendingRequests() {
+            if (!teacherData) return;
+            const list = document.getElementById('requestList');
+            try {
+                const { data } = await sb.from('teacher_requests')
+                    .select('*, from_teacher:from_teacher_id(name), subject:subject_id(name)')
+                    .eq('to_teacher_id', teacherData.id)
+                    .eq('status', 'pending');
+
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:40px;">No pending requests.</p>';
+                    return;
+                }
+
+                list.innerHTML = data.map(r => {
+                    const fromNameEsc = escapeHTML(r.from_teacher?.name || 'Unknown');
+                    const subNameEsc = escapeHTML(r.subject?.name || 'Subject');
+                    const dateEsc = escapeHTML(r.date);
+                    const periodEsc = escapeHTML(r.period);
+                    
+                    return `
+                    <div class="subject-card" style="padding:16px; margin-bottom:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+                            <div>
+                                <div style="font-size:11px; font-weight:700; color:var(--blue); text-transform:uppercase;">From ${fromNameEsc}</div>
+                                <div style="font-size:14px; font-weight:700; color:var(--tp); margin:2px 0;">${subNameEsc}</div>
+                                <div style="font-size:11px; color:var(--ts);">${dateEsc} · ${periodEsc}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="handleRequest('${r.id}', 'accepted')" style="flex:1; padding:8px; border-radius:10px; border:none; background:var(--blue); color:#fff; font-size:12px; font-weight:700; cursor:pointer;">Accept</button>
+                            <button onclick="handleRequest('${r.id}', 'rejected')" style="flex:1; padding:8px; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--ts); font-size:12px; font-weight:700; cursor:pointer;">Decline</button>
+                        </div>
+                    </div>
+                `;}).join('');
+            } catch (err) { console.error(err); }
+        }
+
+        async function loadLeaveHistory() {
+            if (!teacherData) return;
+            const list = document.getElementById('leaveHistory');
+            try {
+                const { data } = await sb.from('leave_requests')
+                    .select('*')
+                    .eq('teacher_id', teacherData.id)
+                    .order('created_at', { ascending: false });
+
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:20px;">No history available.</p>';
+                    return;
+                }
+
+                list.innerHTML = ''; // Clear before rebuild
+                data.forEach(l => addLeaveCard(l));
+            } catch (err) { console.error(err); }
+        }
+
+        async function cancelLeaveRequest(leaveId) {
+            openDeleteModal(leaveId);
+        }
+
+        let selectedDeleteId = null;
+        function openDeleteModal(id) {
+            selectedDeleteId = id;
+            document.getElementById('deleteModal').classList.add('show');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+            selectedDeleteId = null;
+        }
+
+        async function confirmDelete() {
+            if (!selectedDeleteId) return;
+            const leaveId = selectedDeleteId;
+            try {
+                // Delete cascaded requests first
+                await sb.from('teacher_requests').delete().eq('leave_id', leaveId);
+                // Then delete the leave record
+                const { error } = await sb.from('leave_requests').delete().eq('id', leaveId);
+                if (error) throw error;
+
+                showConfirm("Leave request cancelled.");
+                removeLeaveCard(leaveId);
+                closeDeleteModal();
+            } catch (err) {
+                console.error(err);
+                showError("Failed to cancel request.");
+            }
+        }
+
+        function addLeaveCard(l) {
+            const list = document.getElementById('leaveHistory');
+            // Deduplicate — don't add if card already rendered
+            if (document.getElementById(`leave-${l.id}`)) return;
+
+            // Remove empty placeholder if any
+            const placeholder = list.querySelector('p');
+            if (placeholder) placeholder.remove();
+
+            const card = document.createElement('div');
+            card.className = 'subject-card leave-card';
+            card.id = `leave-${l.id}`;
+            card.style.cssText = 'padding:16px; margin-bottom:12px; position:relative; animation: slideIn 0.3s ease-out;';
+            const reasonEsc = escapeHTML(l.reason || l.leave_type);
+            const startDateEsc = escapeHTML(l.start_date || l.date);
+            const endDateEsc = l.end_date && l.end_date !== l.start_date ? ' → ' + escapeHTML(l.end_date) : '';
+            const statusEsc = escapeHTML(l.status);
+
+            card.innerHTML = `
+                <div class="leave-title" style="font-size:14px; font-weight:700; color:var(--tp);">Leave for ${reasonEsc}</div>
+                <div class="leave-date" style="font-size:11px; color:var(--ts); margin:4px 0;">${startDateEsc}${endDateEsc}</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                    <span class="status tag" style="background:${l.status === 'approved' ? '#edfaf3' : l.status === 'rejected' ? '#fff1f0' : '#fff8ec'}; border-color:${l.status === 'approved' ? '#d1fadf' : l.status === 'rejected' ? '#ffa39e' : '#fef3c7'}; color:${l.status === 'approved' ? '#027a48' : l.status === 'rejected' ? '#cf1322' : '#b45309'}; padding:4px 8px; border-radius:8px; font-size:10px; font-weight:700; text-transform:capitalize;">${statusEsc}</span>
+                    <div style="display:flex; gap:8px;">
+                        ${l.status === 'pending' ? `
+                            <button onclick="openDeleteModal('${l.id}')" style="background:none; border:none; padding:4px; color:#ff4d4f; cursor:pointer; display:flex; align-items:center;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            list.prepend(card);
+        }
+
+        function removeLeaveCard(id) {
+            const card = document.getElementById(`leave-${id}`);
+            if (card) {
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                card.style.transition = 'all 0.3s ease';
+                setTimeout(() => {
+                    card.remove();
+                    const list = document.getElementById('leaveHistory');
+                    if (list.children.length === 0 || (list.children.length === 1 && list.querySelector('p'))) {
+                        list.innerHTML = '<p style="text-align:center; color:var(--tm); font-size:13px; padding:20px;">No history available.</p>';
+                    }
+                }, 300);
+            }
+        }
+
+        function updateLeaveStatus(data) {
+            const card = document.getElementById(`leave-${data.id}`);
+            if (card) {
+                const statusEl = card.querySelector('.status');
+                if (statusEl) {
+                    statusEl.textContent = data.status;
+                    statusEl.style.background = data.status === 'approved' ? '#edfaf3' : data.status === 'rejected' ? '#fff1f0' : '#fff8ec';
+                    statusEl.style.borderColor = data.status === 'approved' ? '#d1fadf' : data.status === 'rejected' ? '#ffa39e' : '#fef3c7';
+                    statusEl.style.color = data.status === 'approved' ? '#027a48' : data.status === 'rejected' ? '#cf1322' : '#b45309';
+                }
+                if (data.status !== 'pending') {
+                    const btn = card.querySelector('button');
+                    if (btn) btn.remove();
+                }
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                const label = item.querySelector('.nav-label').textContent.toLowerCase();
+                item.classList.toggle('active', label === tabId);
+            });
+            document.querySelectorAll('.tab-view').forEach(view => {
+                view.style.display = view.id === `view-${tabId}` ? 'block' : 'none';
+            });
+            if (tabId === 'requests') loadPendingRequests();
+            if (tabId === 'leave') loadLeaveHistory();
+        }
+
+    </script>
+</body>
+
+</html>

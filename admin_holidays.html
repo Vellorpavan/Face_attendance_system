@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Holiday Management — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+            --red: #e53e5a;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            overflow-x: hidden;
+        }
+
+        /* Decorative blobs */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -100px;
+            right: -80px;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.2) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 80px;
+            left: -80px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 56px 22px 40px;
+            animation: pageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.08);
+            transition: transform 0.2s;
+            color: var(--tp);
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .back-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--tp);
+        }
+
+        /* ── Calendar UI ── */
+        .calendar-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 4px 24px rgba(26, 79, 219, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .cal-nav {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            background: var(--blue-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: 1px solid var(--blue-border);
+        }
+
+        .cal-nav:active {
+            transform: scale(0.9);
+        }
+
+        .cal-nav svg {
+            width: 20px;
+            height: 20px;
+            stroke: var(--blue);
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .cal-month {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.3px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+
+        .cal-day-name {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--tm);
+            padding-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .cal-cell {
+            aspect-ratio: 1;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            position: relative;
+            background: #f8faff;
+            transition: 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+            border: 1px solid var(--border);
+            color: var(--ts);
+        }
+
+        .cal-cell:not(.empty):not(.sun):hover {
+            background: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.08);
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .cal-cell.empty {
+            background: transparent;
+            cursor: default;
+            border: none;
+        }
+
+        .cal-cell.sun {
+            background: rgba(229, 62, 90, 0.04);
+            color: var(--red);
+            opacity: 0.8;
+            border-color: rgba(229, 62, 90, 0.1);
+        }
+
+        .cal-cell.today {
+            background: var(--blue-soft);
+            color: var(--blue);
+            border-color: var(--blue);
+            font-weight: 900;
+        }
+
+        .cal-cell.holiday {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+            font-weight: 800;
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.3);
+        }
+
+        /* ── Upcoming List ── */
+        .section-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: var(--tp);
+            margin: 32px 0 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-count {
+            font-size: 11px;
+            background: var(--blue-soft);
+            color: var(--blue);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            border: 1px solid var(--blue-border);
+        }
+
+        .list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .holiday-row {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 12px rgba(26, 79, 219, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .h-date {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--blue);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .h-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--tp);
+        }
+
+        .btn-rmv {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: rgba(229, 62, 90, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            color: var(--red);
+        }
+
+        .btn-rmv:hover {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .btn-rmv svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 14px;
+            color: var(--tm);
+            border: 2px dashed var(--border);
+            border-radius: 24px;
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* ── Bottom Sheet Modal ── */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(13, 27, 62, 0.4);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .overlay.show {
+            display: flex;
+            animation: fade 0.3s;
+        }
+
+        .sheet {
+            width: 100%;
+            max-width: 480px;
+            background: #fff;
+            border-radius: 32px 32px 0 0;
+            padding: 32px 24px 44px;
+            transform: translateY(0);
+            animation: slideUp 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+        }
+
+        .sheet::before {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 4px;
+            border-radius: 2px;
+            background: #e2e8f0;
+        }
+
+        .sheet-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            color: var(--tp);
+        }
+
+        .sheet-sub {
+            font-size: 14px;
+            color: var(--ts);
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        .input-label {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .custom-input {
+            width: 100%;
+            background: #f8faff;
+            border: 2px solid #edf2f7;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 15px;
+            font-family: inherit;
+            font-weight: 600;
+            color: var(--tp);
+            transition: 0.2s;
+        }
+
+        .custom-input:focus {
+            border-color: var(--blue);
+            background: #fff;
+            outline: none;
+            box-shadow: 0 0 0 4px var(--blue-soft);
+        }
+
+        .sheet-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            height: 52px;
+            border-radius: 16px;
+            border: none;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: var(--ts);
+        }
+
+        .btn-cancel:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-confirm {
+            background: var(--blue);
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(26, 79, 219, 0.3);
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(26, 79, 219, 0.4);
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        /* Loader */
+        .loader-wrap {
+            display: none;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(245, 176, 65, 0.2);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <header class="header">
+            <div onclick="if(document.referrer) { history.back(); } else { window.location.href='admin_dashboard.html'; }"
+                class="back-btn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </div>
+            <h1 class="header-title">Holiday Calendar</h1>
+        </header>
+
+        <!-- Calendar View -->
+        <div class="calendar-card">
+            <div class="cal-header">
+                <div class="cal-nav" onclick="changeMonth(-1)">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </div>
+                <div class="cal-month" id="calMonthDisplay">February 2026</div>
+                <div class="cal-nav" onclick="changeMonth(1)">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="cal-grid" id="calGrid">
+                <!-- Headers -->
+                <div class="cal-day-name sun">Sun</div>
+                <div class="cal-day-name">Mon</div>
+                <div class="cal-day-name">Tue</div>
+                <div class="cal-day-name">Wed</div>
+                <div class="cal-day-name">Thu</div>
+                <div class="cal-day-name">Fri</div>
+                <div class="cal-day-name">Sat</div>
+                <!-- Cells generated via JS -->
+            </div>
+        </div>
+
+        <!-- Upcoming List -->
+        <div class="section-title">
+            Upcoming Holidays
+            <div class="section-count" id="hCount">0</div>
+        </div>
+
+        <div class="loader-wrap" id="loader">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="list-container" id="holidayList">
+            <!-- Rendered via JS -->
+        </div>
+    </div>
+
+    <!-- Selection Bottom Sheet -->
+    <div class="overlay" id="sheetOverlay" onclick="closeSheet(event)">
+        <div class="sheet" id="sheetCont" onclick="event.stopPropagation()">
+            <h2 class="sheet-title" id="sheetTitle">Create Holiday</h2>
+            <p class="sheet-sub" id="sheetSub">Selected date will be marked as a public holiday.</p>
+
+            <div class="input-group">
+                <label class="input-label">Event Name</label>
+                <input type="text" id="holidayReason" class="custom-input" placeholder="e.g. Diwali, Christmas"
+                    autocomplete="off">
+            </div>
+
+            <div class="sheet-actions">
+                <button class="btn btn-cancel" onclick="closeSheet()">Cancel</button>
+                <button class="btn btn-confirm" id="btnConfirm" onclick="saveHoliday()">Apply Holiday</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let currentDate = new Date();
+        let dbHolidays = []; // Array of DB holiday records
+        let selectedIsoDateStr = null; // YYYY-MM-DD for the sheet
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCalendar();
+        });
+
+        window.addEventListener('load', async () => {
+            const { session, user, role } = await protectRoute(['admin']);
+            if (!session) return;
+
+            await fetchHolidays();
+        });
+
+        async function fetchHolidays() {
+            document.getElementById('loader').style.display = 'flex';
+            document.getElementById('holidayList').innerHTML = '';
+
+            // Fetch all holidays from today onwards
+            const todayStr = new Date().toISOString().split('T')[0];
+            const { data, error } = await sb.from('holidays')
+                .select('*')
+                .gte('date', todayStr)
+                .order('date', { ascending: true });
+
+            document.getElementById('loader').style.display = 'none';
+
+            if (error) {
+                console.error("Error fetching holidays:", error);
+                document.getElementById('holidayList').innerHTML = '<div class="empty-state">Failed to load holidays</div>';
+                return;
+            }
+
+            dbHolidays = data || [];
+            document.getElementById('hCount').textContent = dbHolidays.length;
+
+            renderCalendar();
+            renderList();
+        }
+
+        // ── Calendar Logic ──
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('calMonthDisplay').textContent = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1).getDay(); // 0(Sun) - 6(Sat)
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            console.log("Calendar Debug - firstDayOfMonth:", firstDay, "totalDays:", daysInMonth);
+
+            const today = new Date();
+            const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
+            const todayDate = today.getDate();
+
+            let gridHtml = `
+                <div class="cal-day-name sun">SUN</div><div class="cal-day-name">MON</div><div class="cal-day-name">TUE</div><div class="cal-day-name">WED</div><div class="cal-day-name">THU</div><div class="cal-day-name">FRI</div><div class="cal-day-name">SAT</div>
+            `;
+
+            // Empty slots before 1st
+            for (let i = 0; i < firstDay; i++) {
+                gridHtml += `<div class="cal-cell empty"></div>`;
+            }
+
+            // Days
+            for (let d = 1; d <= daysInMonth; d++) {
+                let cellDate = new Date(year, month, d);
+                let dayOfWeek = cellDate.getDay();
+
+                // Format YYYY-MM-DD for checking DB
+                let isoStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                let classes = ['cal-cell'];
+                let isSun = dayOfWeek === 0;
+                let isToday = isCurrentMonth && d === todayDate;
+
+                let isMarkedHoliday = dbHolidays.find(h => h.date === isoStr);
+
+                if (isSun) classes.push('sun');
+                if (isToday) classes.push('today');
+                if (isMarkedHoliday) classes.push('holiday');
+
+                // Interaction
+                let onclickStr = '';
+                if (!isSun) { onclickStr = `onclick="openSheet('${isoStr}')"`; }
+
+                gridHtml += `<div class="${classes.join(' ')}" ${onclickStr}>${d}</div>`;
+            }
+
+            document.getElementById('calGrid').innerHTML = gridHtml;
+        }
+
+        // ── List View ──
+        function renderList() {
+            const listEl = document.getElementById('holidayList');
+            if (dbHolidays.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">No upcoming holidays scheduled.</div>';
+                return;
+            }
+
+            let html = '';
+            dbHolidays.forEach(h => {
+                let dObj = new Date(h.date);
+                let dStr = dObj.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
+                html += `
+                <div class="holiday-row">
+                        <div>
+                            <div class="h-date">${escapeHTML(dStr)}</div>
+                            <div class="h-title">${escapeHTML(h.reason || 'Official Holiday')}</div>
+                        </div>
+                        <div class="btn-rmv" onclick="revokeHoliday('${h.id}')" title="Revoke Holiday">
+                            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </div>
+                    </div>
+                `;
+            });
+            listEl.innerHTML = html;
+        }
+
+        // ── Sheet Interaction ──
+        function openSheet(isoStr) {
+            // Check if already a holiday, if it is, tell them to use the remove button instead
+            if (dbHolidays.find(h => h.date === isoStr)) {
+                showWarning('This day is already marked as a holiday. Remove it from the list below.');
+                return;
+            }
+
+            selectedIsoDateStr = isoStr;
+            let dObj = new Date(isoStr);
+            let displayStr = dObj.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+
+            document.getElementById('sheetSub').textContent = `Selected: ${displayStr}. This will disable attendance markers for this specific day.`;
+            document.getElementById('holidayReason').value = '';
+
+            const overlay = document.getElementById('sheetOverlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('show'), 10);
+            document.getElementById('holidayReason').focus();
+        }
+
+        function closeSheet(e) {
+            if (e && e.target !== document.getElementById('sheetOverlay')) return;
+            const overlay = document.getElementById('sheetOverlay');
+            overlay.classList.remove('show');
+            setTimeout(() => overlay.style.display = 'none', 300);
+        }
+
+        async function saveHoliday() {
+            if (!selectedIsoDateStr) return;
+            let reason = document.getElementById('holidayReason').value.trim() || 'Holiday';
+
+            const btn = document.getElementById('btnConfirm');
+            btn.textContent = "Saving..."; btn.disabled = true;
+
+            const { error } = await sb.from('holidays').insert([{ date: selectedIsoDateStr, reason: reason }]);
+
+            btn.textContent = "Confirm Holiday"; btn.disabled = false;
+
+            if (error) { showError('Failed to save: ' + error.message); return; }
+
+            closeSheet();
+            fetchHolidays(); // reload everything
+        }
+
+        async function revokeHoliday(id) {
+            const ok = await showConfirm('Teachers will immediately be able to take attendance on this day.', { title: 'Revoke this holiday?', confirmText: 'Revoke', danger: true });
+            if (!ok) return;
+
+            const { error } = await sb.from('holidays').delete().eq('id', id);
+            if (error) { showError('Failed to revoke: ' + error.message); return; }
+
+            fetchHolidays();
+        }
+    </script>
+</body>
+
+</html>

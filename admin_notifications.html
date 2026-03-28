@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Notification Settings — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+            --nav-h: 70px;
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            overflow-x: hidden;
+        }
+
+        /* Decorative blobs */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -100px;
+            right: -80px;
+            width: 320px;
+            height: 320px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.2) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: 80px;
+            left: -80px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 56px 22px 40px;
+            animation: pageIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(18px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(26, 79, 219, 0.08);
+            transition: transform 0.2s;
+            color: var(--tp);
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .back-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--tp);
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 30px 24px;
+            box-shadow: 0 4px 24px rgba(26, 79, 219, 0.08);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .section-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--blue-soft);
+            color: var(--blue);
+            padding: 5px 14px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            border: 1px solid var(--blue-border);
+        }
+
+        .intro h1 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.6px;
+        }
+
+        .intro p {
+            font-size: 14px;
+            color: var(--ts);
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .group-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--tm);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 24px 0 12px 4px;
+        }
+
+        .settings-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .setting-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            /* For loading overlay */
+            overflow: hidden;
+        }
+
+        .setting-card.loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .setting-card.success-glow {
+            animation: successGlow 1.5s ease;
+        }
+
+        @keyframes successGlow {
+            0% {
+                box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+            }
+
+            20% {
+                box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+            }
+
+            100% {
+                box-shadow: 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .setting-card:active {
+            transform: scale(0.98);
+        }
+
+        .setting-icon {
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            background: var(--bg);
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-info h3 {
+            font-size: 14.5px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: var(--tp);
+        }
+
+        .setting-info p {
+            font-size: 12px;
+            color: var(--ts);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 28px;
+            background-color: #E5E7EB;
+            border-radius: 30px;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            flex-shrink: 0;
+            cursor: pointer;
+            display: block;
+        }
+
+        .toggle-knob {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 22px;
+            height: 22px;
+            background-color: #6B7280;
+            border-radius: 50%;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ON State */
+        .setting-card.active .toggle-switch {
+            background: linear-gradient(135deg, #0ea5e9 0%, #10b981 100%);
+            border-color: transparent;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1), 0 0 10px rgba(16, 185, 129, 0.3);
+        }
+
+        .setting-card.active .toggle-knob {
+            transform: translateX(22px);
+            background-color: #ffffff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-save {
+            width: 100%;
+            margin-top: 36px;
+            background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
+            color: #fff;
+            border: none;
+            padding: 18px;
+            border-radius: 18px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 12px 32px rgba(8, 145, 178, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 40px rgba(8, 145, 178, 0.4);
+        }
+
+        .btn-save:active {
+            transform: translateY(0);
+        }
+
+        .btn-save:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #0d1b3e;
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--cyan-soft);
+            border-top: 4px solid var(--cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loading-overlay" id="loading">
+        <div class="spinner"></div>
+    </div>
+    <div class="page">
+        <header class="header">
+            <a href="admin_dashboard.html" class="back-btn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </a>
+            <h1 class="header-title">Notifications Hub</h1>
+        </header>
+
+        <!-- SEND NOTIFICATION CARD -->
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="section-tag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                Communication Hub
+            </div>
+            <div class="intro">
+                <h1>Send Notification</h1>
+                <p>Broadcast messages to students based on branch, year, or individual roll number.</p>
+            </div>
+
+            <div class="settings-list" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-group">
+                    <label class="group-label" style="display: block; margin: 0 0 8px 4px;">Notification Title</label>
+                    <input type="text" id="notif_title" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none;" placeholder="e.g. Exam Schedule Updated">
+                </div>
+                <div class="form-group">
+                    <label class="group-label" style="display: block; margin: 0 0 8px 4px;">Message</label>
+                    <textarea id="notif_message" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none; min-height: 100px; resize: vertical;" placeholder="Type your message here..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="group-label" style="display: block; margin: 0 0 8px 4px;">Target Audience</label>
+                    <select id="notif_target_type" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none; appearance: none; background: #fff url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23007CB2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22/%3E%3C/svg%3E') no-repeat right 12px center; background-size: 12px;" onchange="handleTargetTypeChange()">
+                        <option value="all">All Students</option>
+                        <option value="class">Branch/Year/Semester</option>
+                        <option value="section">Branch/Year/Semester/Section</option>
+                        <option value="student">Specific Student (Roll Number)</option>
+                    </select>
+                </div>
+
+                <div id="target_filters" style="display: none; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <select id="notif_branch" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none;">
+                        <option value="">All Branches</option>
+                        <option value="AI">AI</option>
+                        <option value="CSE">CSE</option>
+                        <option value="ECE">ECE</option>
+                        <option value="EEE">EEE</option>
+                        <option value="MECH">MECH</option>
+                        <option value="CIVIL">CIVIL</option>
+                    </select>
+                    <select id="notif_year" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none;">
+                        <option value="">All Years</option>
+                        <option value="1">1st Year</option>
+                        <option value="2">2nd Year</option>
+                        <option value="3">3rd Year</option>
+                        <option value="4">4th Year</option>
+                    </select>
+                    <select id="notif_semester" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none;">
+                        <option value="">All Semesters</option>
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                    </select>
+                    <select id="notif_section" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none;">
+                        <option value="">All Sections</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+
+                <div id="target_roll_number" style="display: none;">
+                    <input type="text" id="notif_roll" style="width: 100%; padding: 12px; border-radius: 14px; border: 1px solid var(--border); font-family: inherit; font-size: 14px; outline: none;" placeholder="Enter Student Roll Number">
+                </div>
+
+                <button class="btn-save" id="btn_send_notif" onclick="sendCustomNotification()">
+                    <span id="send_btn_text">🚀 Send Notification</span>
+                </button>
+            </div>
+        </div>
+
+
+        <div class="toast" id="toast">✓ Preferences updated</div>
+
+        <script>
+            let currentUserId = null;
+
+            function showToast(msg, isError = false) {
+                const t = document.getElementById('toast');
+                t.textContent = msg;
+                t.style.background = isError ? '#ef4444' : 'var(--tp)';
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 3000);
+            }
+
+            // ── Send Notification Functions ───────────────
+
+            function handleTargetTypeChange() {
+                const type = document.getElementById('notif_target_type').value;
+                const filters = document.getElementById('target_filters');
+                const rollInput = document.getElementById('target_roll_number');
+                
+                filters.style.display = (type === 'class' || type === 'section') ? 'grid' : 'none';
+                rollInput.style.display = (type === 'student') ? 'block' : 'none';
+            }
+
+            async function sendCustomNotification() {
+                // Step 2 & 3: Read and Validate Form Values
+                const title = document.getElementById('notif_title').value.trim();
+                const message = document.getElementById('notif_message').value.trim();
+                const targetType = document.getElementById('notif_target_type').value;
+                
+                const branch = document.getElementById('notif_branch').value;
+                const year = document.getElementById('notif_year').value;
+                const semester = document.getElementById('notif_semester').value;
+                const section = document.getElementById('notif_section').value;
+                const roll = document.getElementById('notif_roll').value.trim();
+
+                if (!title || !message) {
+                    showToast('Please fill title and message', true);
+                    return;
+                }
+
+                // Validation for targeted audience (Step 3)
+                if (targetType === 'class' || targetType === 'section') {
+                    if (!branch || !year || !semester) {
+                        showToast('Branch, Year, and Semester are required', true);
+                        return;
+                    }
+                }
+
+                const btn = document.getElementById('btn_send_notif');
+                const btnText = document.getElementById('send_btn_text');
+                btn.disabled = true;
+                btnText.textContent = 'Sending...';
+
+                try {
+                    // Step 4 & 5: Insert Notification into Supabase with Debugging
+                    const payload = {
+                        title: title,
+                        message: message,
+                        branch: (targetType === 'class' || targetType === 'section') ? (branch || null) : null,
+                        year: (targetType === 'class' || targetType === 'section') ? (year || null) : null,
+                        semester: (targetType === 'class' || targetType === 'section') ? (semester || null) : null,
+                        section: (targetType === 'section') ? (section || null) : null,
+                        target_type: targetType,
+                        target_role: 'student',
+                        type: 'announcement',
+                        student_roll: targetType === 'student' ? (roll || null) : null,
+                        created_by: currentUserId,
+                        created_at: new Date().toISOString()
+                    };
+
+                    console.log('Sending Notification Payload:', payload);
+
+                    const { error } = await sb.from('notifications').insert([payload]);
+                    
+                    if (error) {
+                        console.error('Notification Insert Error:', error);
+                        alert("Failed to send notification: " + (error.message || 'Internal Error'));
+                        throw error;
+                    }
+
+                    // Success Response (Step 5)
+                    alert('Notification sent successfully');
+                    showToast('Notification sent successfully!');
+                    
+                    // Clear form
+                    document.getElementById('notif_title').value = '';
+                    document.getElementById('notif_message').value = '';
+                    document.getElementById('notif_roll').value = '';
+                    document.getElementById('notif_branch').value = '';
+                    document.getElementById('notif_year').value = '';
+                    document.getElementById('notif_semester').value = '';
+                    document.getElementById('notif_section').value = '';
+
+                } catch (e) {
+                    console.error('Send error:', e);
+                    showToast('Failed to send notification', true);
+                } finally {
+                    btn.disabled = false;
+                    btnText.textContent = '🚀 Send Notification';
+                }
+            }
+
+            // ── Boot sequence ─────────────────────────────────
+
+            window.addEventListener('load', async () => {
+                document.getElementById('loading').style.display = 'flex';
+                try {
+                    const { session, role } = await protectRoute(['admin', 'teacher']);
+                    if (!session) return;
+                    currentUserId = session.user.id;
+                    console.log('✅ User ID:', currentUserId);
+                } catch (e) {
+                    console.error('Boot error:', e);
+                    showToast('Error: ' + e.message, true);
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            });
+        </script>
+
+</body>
+
+</html>

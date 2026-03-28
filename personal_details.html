@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Personal Details — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.15);
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --err: #e53e5a;
+            --errs: rgba(229, 62, 90, 0.08);
+            --gb: rgba(255, 255, 255, 0.54);
+            --gbd: rgba(255, 255, 255, 0.72)
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(165deg, #f3f8ff 0%, #ddeeff 100%);
+            overflow-x: hidden
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -130px;
+            right: -90px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.22) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -120px;
+            left: -90px;
+            width: 360px;
+            height: 360px;
+            background: radial-gradient(circle, rgba(26, 79, 219, 0.11) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none
+        }
+
+        .screen {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 36px 20px 48px;
+            min-height: 100vh;
+            animation: pageIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .logo-img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            border-radius: 16px;
+            filter: drop-shadow(0 4px 14px rgba(26, 79, 219, 0.2));
+            margin-bottom: 20px
+        }
+
+        .step-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 22px
+        }
+
+        .step-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(26, 79, 219, 0.18)
+        }
+
+        .step-dot.active {
+            width: 24px;
+            border-radius: 4px;
+            background: var(--blue)
+        }
+
+        .card {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            background: var(--gb);
+            border: 1.5px solid var(--gbd);
+            border-radius: 30px;
+            padding: 34px 26px 30px;
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            box-shadow: 0 24px 64px rgba(26, 79, 219, 0.11), 0 4px 18px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.85)
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 30px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0) 55%);
+            pointer-events: none
+        }
+
+        .card-header {
+            margin-bottom: 26px;
+            position: relative
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--blue);
+            margin-bottom: 12px
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--blue)
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.4px;
+            margin-bottom: 4px
+        }
+
+        .card-sub {
+            font-size: 13.5px;
+            color: var(--ts)
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 24px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--blue-border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field {
+            margin-bottom: 14px;
+            position: relative
+        }
+
+        .field label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--ts);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 7px
+        }
+
+        .field label .required {
+            color: var(--err);
+            font-size: 14px;
+        }
+
+        .field label .optional {
+            color: var(--tm);
+            font-size: 10px;
+            font-weight: 500;
+            margin-left: auto;
+        }
+
+        input[type="text"],
+        input[type="tel"] {
+            width: 100%;
+            padding: 13px 16px;
+            border-radius: 14px;
+            border: 1.5px solid var(--blue-border);
+            background: rgba(255, 255, 255, 0.72);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: var(--tp);
+            outline: none;
+            transition: border-color .18s, box-shadow .18s, background .18s;
+        }
+
+        input:focus {
+            border-color: var(--blue);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 0 0 3.5px rgba(26, 79, 219, 0.1)
+        }
+
+        .btn-save {
+            width: 100%;
+            margin-top: 24px;
+            padding: 16px 0;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            background: linear-gradient(135deg, #1a4fdb 0%, #2a62f0 100%);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 10px 30px rgba(26, 79, 219, 0.36);
+            transition: transform .18s, box-shadow .18s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 38px rgba(26, 79, 219, 0.42)
+        }
+
+        .btn-save:disabled {
+            opacity: .65;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        .helper-text {
+            font-size: 12px;
+            color: var(--ts);
+            background: var(--blue-soft);
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border-left: 3px solid var(--blue);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="screen">
+        <img src="logo.png" alt="SVPP Logo" class="logo-img" />
+        <div class="step-row">
+            <div class="step-dot"></div>
+            <div class="step-dot"></div>
+            <div class="step-dot active"></div>
+            <div class="step-dot"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="badge"><span class="badge-dot"></span>Step 3 of 4</div>
+                <h1 class="card-title">Personal Details</h1>
+                <p class="card-sub">Please provide your parent's information</p>
+            </div>
+
+            <div class="helper-text">
+                Student and Father details are <b>required</b>. Mother details are optional.
+            </div>
+
+            <form id="detailsForm" onsubmit="handleSubmit(event)">
+                <!-- Student's Details -->
+                <div class="section-title">📱 Student Information</div>
+                
+                <div class="field">
+                    <label>Student Mobile Number <span class="required">*</span></label>
+                    <input type="tel" id="studentMobile" placeholder="10-digit mobile number" pattern="[0-9]{10}" required />
+                </div>
+
+                <!-- Father's Details -->
+                <div class="section-title">👨 Father's Information</div>
+                
+                <div class="field">
+                    <label>Father's Name <span class="required">*</span></label>
+                    <input type="text" id="fatherName" placeholder="Full name of your father" required />
+                </div>
+
+                <div class="field">
+                    <label>Occupation <span class="required">*</span></label>
+                    <input type="text" id="fatherOccupation" placeholder="e.g. Farmer, Teacher, Driver" required />
+                </div>
+
+                <div class="field">
+                    <label>Mobile Number <span class="required">*</span></label>
+                    <input type="tel" id="fatherMobile" placeholder="10-digit mobile number" pattern="[0-9]{10}" required />
+                </div>
+
+                <!-- Mother's Details -->
+                <div class="section-title">👩 Mother's Information</div>
+
+                <div class="field">
+                    <label>Mother's Name <span class="optional">(Optional)</span></label>
+                    <input type="text" id="motherName" placeholder="Full name of your mother" />
+                </div>
+
+                <div class="field">
+                    <label>Occupation <span class="optional">(Optional)</span></label>
+                    <input type="text" id="motherOccupation" placeholder="e.g. Homemaker, Teacher" />
+                </div>
+
+                <div class="field">
+                    <label>Mobile Number <span class="optional">(Optional)</span></label>
+                    <input type="tel" id="motherMobile" placeholder="10-digit mobile number" pattern="[0-9]{10}" />
+                </div>
+
+                <button type="submit" class="btn-save" id="saveBtn">
+                    Save & Finish Registration
+                </button>
+            </form>
+        </div>
+        <p class="footer-note">SVPP ATTENDANCE (FACE RECOGNITION) &copy; 2026</p>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let isExistingStudent = false;
+
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['student', 'admin']);
+            if (!session) return;
+            currentUser = session.user;
+
+            // Check if student is already approved or has a pending request
+            const [{ data: student }, { data: req }] = await Promise.all([
+                sb.from('students').select('*').eq('auth_user_id', currentUser.id).maybeSingle(),
+                sb.from('student_requests').select('*').eq('auth_user_id', currentUser.id).maybeSingle()
+            ]);
+
+            if (student) {
+                isExistingStudent = true;
+                // Auto-fill student mobile if it exists
+                if (student.student_mobile) {
+                    document.getElementById('studentMobile').value = student.student_mobile;
+                }
+                // We no longer redirect based on father_name here. 
+                // The dashboard or login handles the redirect to this page if profile_completed is false.
+            } else if (req) {
+                // Auto-fill student mobile if it exists in request
+                if (req.student_mobile) {
+                    document.getElementById('studentMobile').value = req.student_mobile;
+                }
+            } else {
+                // Should have done profile setup first
+                window.location.href = 'profile_setup.html';
+            }
+        });
+
+        function isValidMobile(num) {
+            if (!/^[0-9]{10}$/.test(num)) return false;
+            
+            // Reject repeated digits (e.g., 0000000000)
+            if (/^(\d)\1{9}$/.test(num)) return false;
+            
+            // Reject sequential digits (e.g., 1234567890, 9876543210)
+            const sequential = "012345678909876543210";
+            if (sequential.includes(num)) return false;
+            
+            return true;
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            
+            const sMob = document.getElementById('studentMobile').value.trim();
+            const fMob = document.getElementById('fatherMobile').value.trim();
+            const mMob = document.getElementById('motherMobile').value.trim();
+
+            // 1. Pattern & Fake Number Validation
+            if (!isValidMobile(sMob)) {
+                alert('Please enter a valid student mobile number.');
+                return;
+            }
+            if (!isValidMobile(fMob)) {
+                alert('Please enter a valid father mobile number.');
+                return;
+            }
+            if (mMob && !isValidMobile(mMob)) {
+                alert('Please enter a valid mother mobile number.');
+                return;
+            }
+
+            // 2. Uniqueness Validation
+            if (sMob === fMob) {
+                alert('Student and father mobile numbers must be different.');
+                return;
+            }
+            if (mMob && (sMob === mMob || fMob === mMob)) {
+                alert('Student and parent mobile numbers must be different.');
+                return;
+            }
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving Details...';
+
+            const isComplete = (
+                sMob && 
+                document.getElementById('fatherName').value.trim() && 
+                fMob && 
+                document.getElementById('fatherOccupation').value.trim()
+            );
+
+            const details = {
+                uid: currentUser.id,
+                student_mobile: sMob,
+                father_name: document.getElementById('fatherName').value.trim(),
+                father_occupation: document.getElementById('fatherOccupation').value.trim(),
+                father_mobile: fMob,
+                mother_name: document.getElementById('motherName').value.trim() || null,
+                mother_occupation: document.getElementById('motherOccupation').value.trim() || null,
+                mother_mobile: mMob || null,
+                profile_completed: !!isComplete
+            };
+
+            try {
+                if (isExistingStudent) {
+                    const { error } = await sb.from('students')
+                        .update(details)
+                        .eq('auth_user_id', currentUser.id);
+                    if (error) throw error;
+                    window.location.href = 'dashboard.html';
+                } else {
+                    const { error } = await sb.from('student_requests')
+                        .update({
+                            ...details,
+                            status: 'pending' // Finalize the request
+                        })
+                        .eq('auth_user_id', currentUser.id);
+                    if (error) throw error;
+                    window.location.href = 'pending_approval.html';
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.textContent = 'Save & Finish Registration';
+                alert('Error saving details: ' + err.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

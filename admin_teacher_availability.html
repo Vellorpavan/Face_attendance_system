@@ -1,0 +1,1539 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teacher Workload — SVPP AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script src="actions.js" defer></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --green: #12b76a;
+            --red: #e53e5a;
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px 20px 80px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 32px;
+            padding-top: 20px;
+        }
+
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            color: var(--tp);
+            text-decoration: none;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header-sub {
+            font-size: 14px;
+            color: var(--ts);
+            font-weight: 600;
+        }
+
+        .setup-card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+            margin-bottom: 24px;
+        }
+
+        .row-inputs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select {
+            background: #f8faff;
+            border: 2px solid #edf2f7;
+            border-radius: 14px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tp);
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+            transition: border-color 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--blue-mid);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border-radius: 20px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 28px;
+            font-weight: 900;
+            color: var(--blue);
+            line-height: 1.2;
+        }
+
+        .stat-lbl {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--ts);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        .grid-container {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .tt-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(6, 1fr);
+            gap: 12px;
+            padding: 16px;
+            min-width: 800px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tt-th {
+            background: #f8faff;
+            color: var(--blue);
+            font-size: 13px;
+            font-weight: 800;
+            padding: 12px;
+            border-radius: 14px;
+            text-align: center;
+            border-bottom: 3px solid rgba(26, 79, 219, 0.1);
+        }
+
+        .tt-row-label {
+            background: #f8faff;
+            color: var(--blue);
+            font-size: 12px;
+            font-weight: 800;
+            padding: 14px;
+            border-radius: 14px;
+            text-align: center;
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tt-cell {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            height: 80px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            box-sizing: border-box;
+            position: relative;
+            z-index: 2;
+            /* CRITICAL: must be auto to receive clicks */
+            pointer-events: auto;
+        }
+
+        .timetable-cell {
+            cursor: pointer;
+            pointer-events: auto !important;
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Force all child elements to pass clicks through to parent */
+        .timetable-cell div,
+        .timetable-cell span,
+        .timetable-cell strong,
+        .timetable-cell br,
+        .timetable-cell .inner {
+            pointer-events: none;
+        }
+
+        .cell-content {
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .cell-content .small {
+            font-size: 9px;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        .bg-free {
+            background: var(--green);
+        }
+
+        .bg-busy {
+            background: var(--red);
+        }
+
+        .bg-lunch {
+            background: #475569;
+        }
+
+        .bg-empty {
+            background: #f1f5ff;
+            border: 2px dashed #cbd5e1;
+            box-shadow: none;
+            color: var(--ts);
+        }
+
+        .loader {
+            display: none;
+            justify-content: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(26, 79, 219, 0.1);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .ghost {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--ts);
+            display: none;
+        }
+
+        /* Modal Styles */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .backdrop.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -40%);
+            background: #fff;
+            border-radius: 28px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            z-index: 1100;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal.show {
+            transform: translate(-50%, -50%);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--tp);
+        }
+
+        .modal-close {
+            cursor: pointer;
+            padding: 8px;
+            font-size: 18px;
+            color: var(--ts);
+        }
+
+        .btn-save {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-save:active {
+            transform: scale(0.98);
+        }
+
+        .btn-delete {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            background: var(--red);
+            color: #fff;
+            border: none;
+            font-weight: 800;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-delete:active {
+            transform: scale(0.98);
+        }
+
+        /* Period Modal Clean UI */
+        .period-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .period-modal.hidden {
+            display: none;
+        }
+
+        .period-modal .modal-box {
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 320px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .period-modal .modal-box input {
+            width: 100%;
+            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid #edf2f7;
+            background: #f8faff;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tp);
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        /* Period Range Selector */
+        .period-range-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #f8faff;
+            border: 2px solid #edf2f7;
+            border-radius: 16px;
+            padding: 14px 16px;
+        }
+
+        .period-range-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .period-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .p-chip {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            border: 2px solid #e2e8f0;
+            background: #fff;
+            color: var(--ts);
+            cursor: pointer;
+            transition: all 0.2s;
+            pointer-events: auto;
+            user-select: none;
+        }
+
+        .p-chip:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .p-chip.chip-start {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+        }
+
+        .p-chip.chip-in-range {
+            background: #dbeafe;
+            color: var(--blue);
+            border-color: #93c5fd;
+        }
+
+        .p-chip.chip-end {
+            background: #0ea5e9;
+            color: #fff;
+            border-color: #0ea5e9;
+        }
+
+        .period-range-hint {
+            font-size: 10px;
+            color: var(--ts);
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .period-range-badges {
+            display: flex;
+            gap: 6px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        .range-badge {
+            font-size: 10px;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 3px 10px;
+            background: #1a4fdb;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="header">
+            <a href="javascript:void(0)"
+                onclick="if(document.referrer) { history.back(); } else { window.location.href='admin_dashboard.html'; }"
+                class="back-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <div>
+                <div class="header-title">Teacher Workload</div>
+                <div class="header-sub">View schedules and availability</div>
+            </div>
+        </div>
+
+        <div class="setup-card">
+            <div class="row-inputs">
+                <div class="input-group">
+                    <label>Select Teacher</label>
+                    <select id="selTeacher" onchange="loadWorkload()">
+                        <option value="">-- Choose Teacher --</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Filter By Day</label>
+                    <select id="selDay" onchange="loadWorkload()">
+                        <option value="ALL">All Days</option>
+                        <option value="MON">Monday</option>
+                        <option value="TUE">Tuesday</option>
+                        <option value="WED">Wednesday</option>
+                        <option value="THU">Thursday</option>
+                        <option value="FRI">Friday</option>
+                        <option value="SAT">Saturday</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="statsCont" class="stats-row" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-val" id="stTotal">0</div>
+                <div class="stat-lbl">Total Classes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" style="color:var(--green)" id="stFree">0</div>
+                <div class="stat-lbl">Free Slots</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-val" style="color:var(--red)" id="stConflicts">0</div>
+                <div class="stat-lbl">Conflicts</div>
+            </div>
+        </div>
+
+        <div id="loader" class="loader">
+            <div class="spinner"></div>
+        </div>
+
+        <div id="ghost" class="ghost">
+            <p>Please select a teacher to view their workload schedule.</p>
+        </div>
+
+        <div id="gridCont" style="display: none;">
+            <div class="grid-container">
+                <div id="ttGrid" class="tt-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Workload Modal -->
+    <div id="backdrop" class="backdrop" onclick="closeModal()"></div>
+    <div id="workloadModal" class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="modalTitle">Assign Manual Workload</div>
+            <div class="modal-close" onclick="closeModal()">✕</div>
+        </div>
+
+        <input type="hidden" id="modalDay">
+        <input type="hidden" id="modalPeriod">
+        <input type="hidden" id="modalRecordId">
+
+        <div class="row-inputs" style="grid-template-columns: 1fr; gap: 16px;">
+            <div class="input-group">
+                <label>Subject</label>
+                <input type="text" id="modSubject"
+                    style="background: #f8faff; border: 2px solid #edf2f7; border-radius: 14px; padding: 12px; font-size: 14px; font-weight: 600; color: var(--tp); outline: none; width: 100%;"
+                    placeholder="e.g. Physics Lab">
+            </div>
+
+            <div class="row-inputs" style="grid-template-columns: 1fr 1fr;">
+                <div class="input-group">
+                    <label>Branch</label>
+                    <select id="branchSelect"
+                        style="background: #f8faff; border: 2px solid #edf2f7; border-radius: 14px; padding: 12px; font-size: 14px; font-weight: 600; color: var(--tp); outline: none; width: 100%;">
+                        <option value="AI">AI</option>
+                        <option value="CSE">CSE</option>
+                        <option value="AI&ML">AI&ML</option>
+                        <option value="DS">DS</option>
+                        <option value="ECE">ECE</option>
+                        <option value="EEE">EEE</option>
+                        <option value="MECH">MECH</option>
+                        <option value="Civil">Civil</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Year</label>
+                    <select id="modYear">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row-inputs" style="grid-template-columns: 1fr 1fr;">
+                <div class="input-group">
+                    <label>Semester</label>
+                    <select id="modSem">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Section</label>
+                    <select id="modSec"
+                        style="background: #f8faff; border: 2px solid #edf2f7; border-radius: 14px; padding: 12px; font-size: 14px; font-weight: 600; color: var(--tp); outline: none; width: 100%;">
+                        <option value="None">None</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Period Range Selector -->
+            <div class="period-range-row">
+                <div class="period-range-label">📅 Periods</div>
+                <div class="period-chips-wrap">
+                    <div class="period-chips" id="periodChips"></div>
+                    <div class="period-range-hint">Tap to select period range — holds consecutive classes</div>
+                </div>
+            </div>
+
+            <button class="btn-save" id="btnSaveWorkload" onclick="saveManualWorkload()">Save Assignment</button>
+            <button id="btnDeleteWorkload" class="btn-delete" type="button" onclick="deleteAssignment(this)"
+                style="display: none;">Remove Assignment</button>
+        </div>
+    </div>
+
+    <!-- Premium Toast Notification -->
+    <div id="toastNotif" style="
+        position: fixed;
+        bottom: 32px;
+        left: 50%;
+        transform: translateX(-50%) translateY(80px);
+        background: linear-gradient(135deg, #1a4fdb 0%, #0ea5e9 100%);
+        color: #fff;
+        padding: 14px 24px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 12px 32px rgba(26,79,219,0.35);
+        z-index: 9999;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.2,1,0.3,1);
+        pointer-events: none;
+        min-width: 220px;
+        justify-content: center;
+        letter-spacing: 0.2px;
+    ">
+        <span style="font-size:20px;">✅</span>
+        <span id="toastMsg">Assignment Saved!</span>
+    </div>
+
+    <!-- Clean Period Modal UI -->
+    <div id="periodModal" class="period-modal hidden">
+        <div class="modal-box">
+            <h3 id="periodModalTitle"
+                style="margin-top:0; font-size:18px; font-weight:800; color:var(--tp); margin-bottom:16px;">Add Period
+            </h3>
+
+            <label style="font-size:12px; font-weight:700; color:var(--ts); display:block; margin-bottom:6px;">Period
+                Name</label>
+            <input id="periodName" placeholder="P1 / LUNCH" />
+
+            <div style="display:flex; gap:12px;">
+                <div style="flex:1;">
+                    <label
+                        style="font-size:12px; font-weight:700; color:var(--ts); display:block; margin-bottom:6px;">Start
+                        Time</label>
+                    <input id="startTime" type="time" />
+                </div>
+                <div style="flex:1;">
+                    <label
+                        style="font-size:12px; font-weight:700; color:var(--ts); display:block; margin-bottom:6px;">End
+                        Time</label>
+                    <input id="endTime" type="time" />
+                </div>
+            </div>
+
+            <div class="modal-actions" style="display:flex; gap:12px; margin-top:16px;">
+                <button onclick="savePeriod()"
+                    style="flex:1; padding:12px; border-radius:12px; border:none; background:var(--blue); color:white; font-weight:700; cursor:pointer;">Save</button>
+                <button onclick="closePeriodModal()"
+                    style="flex:1; padding:12px; border-radius:12px; border:none; background:#edf2f7; color:var(--tp); font-weight:700; cursor:pointer;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ─────────────────────────────────────────────────────────────
+        //  SVPP AI — Teacher Availability  (FIXED: 2026-03)
+        //  KEY FIXES:
+        //   1. Event delegation for FREE slot clicks (document-level)
+        //   2. DB-driven availability (reads timetable every render)
+        //   3. Multi-period save loops all periods, inserts each
+        //   4. Conflict check per period before insert
+        //   5. Full grid re-fetch after every save/delete
+        // ─────────────────────────────────────────────────────────────
+
+        const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        let dynamicPeriods = [];
+        let subjectsDB = [];
+
+        window.onload = async () => {
+            try {
+                if (typeof protectRoute === 'function') {
+                    await protectRoute(['admin']);
+                }
+            } catch (e) {
+                console.error("protectRoute error:", e);
+            }
+            loadFilters();
+
+            // Set up realtime sync for authorized_teachers
+            setupRealtimeTeacherSync();
+
+            // Refresh list dynamically when clicking dropdown
+            const selTeacher = document.getElementById('selTeacher');
+            if (selTeacher) {
+                selTeacher.addEventListener('focus', loadTeachers);
+            }
+
+            window.addEventListener('teachersUpdated', () => {
+                loadTeachers();
+            });
+        };
+
+        function setupRealtimeTeacherSync() {
+            sb.channel('realtime:authorized_teachers_avail')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'authorized_teachers' }, () => {
+                    loadTeachers();
+                    window.dispatchEvent(new Event('teachersUpdated'));
+                })
+                .subscribe();
+        }
+
+        // Page-specific action success handler
+        document.addEventListener('actionSuccess', (e) => {
+            const { table } = e.detail;
+            if (table === 'periods') {
+                loadPeriodsForSync();
+            } else if (table === 'teacher_workload' || table === 'timetable') {
+                closeModal();
+                loadWorkload();
+            }
+        });
+
+        // Fallback explicit listener for grid loading
+        document.addEventListener("DOMContentLoaded", () => {
+            if (document.getElementById('selTeacher').options.length <= 1) {
+                loadFilters();
+                loadTeachers().then(() => {
+                    if (document.getElementById('selTeacher').value) {
+                        loadWorkload();
+                    }
+                });
+            }
+        });
+
+        // Timetable event delegation explicitly hoisted to root scope preventing load hook issues
+        // (Moved to the bottom of the file per strict instructions.)
+
+        const initDefaultPeriods = async () => {
+            const { data } = await sb.from('periods').select('id').limit(1);
+            if (data && data.length > 0) return;
+
+            const defaultPeriods = [
+                { name: 'P1', start_time: '09:30', end_time: '10:20', order_index: 1 },
+                { name: 'P2', start_time: '10:20', end_time: '11:10', order_index: 2 },
+                { name: 'P3', start_time: '11:10', end_time: '12:00', order_index: 3 },
+                { name: 'P4', start_time: '12:00', end_time: '12:50', order_index: 4 },
+                { name: 'LUNCH', start_time: '12:50', end_time: '01:30', order_index: 5 },
+                { name: 'P5', start_time: '01:30', end_time: '02:20', order_index: 6 },
+                { name: 'P6', start_time: '02:20', end_time: '03:10', order_index: 7 }
+            ];
+            await sb.from('periods').insert(defaultPeriods);
+        };
+
+        async function loadTeachers() {
+            try {
+                const { data: tchs, error } = await sb
+                    .from('authorized_teachers')
+                    .select('id, name, email')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const sel = document.getElementById('selTeacher');
+                const currentVal = sel.value;
+
+                if (tchs && tchs.length > 0) {
+                    sel.innerHTML = '<option value="">-- Choose Teacher --</option>';
+                    tchs.forEach(t => {
+                        let opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = `${t.name} (${t.email})`;
+                        sel.appendChild(opt);
+                    });
+                    document.getElementById('ghost').style.display = 'block';
+
+                    if (currentVal && tchs.find(t => t.id === currentVal)) {
+                        sel.value = currentVal;
+                    }
+                } else {
+                    sel.innerHTML = '<option value="">-- Choose Teacher --</option>';
+                    document.getElementById('ghost').innerHTML = '<p>No teachers available</p>';
+                    document.getElementById('ghost').style.display = 'block';
+                }
+            } catch (err) {
+                console.error("Teacher load error:", err);
+                showError("Failed to load active teachers");
+            }
+        }
+
+        async function loadFilters() {
+            try {
+                await initDefaultPeriods();
+                // Fetch dynamic periods from the new periods table
+                const { data: pData, error: pErr } = await sb.from('periods').select('*').order('order_index', { ascending: true });
+                if (pErr) console.error("Error loading periods:", pErr);
+
+                if (pData && pData.length > 0) {
+                    dynamicPeriods = pData.map(p => ({
+                        id: p.id,
+                        name: p.name,
+                        start: p.start_time,
+                        end: p.end_time,
+                        isLunch: p.name.toUpperCase() === 'LUNCH'
+                    }));
+                } else {
+                    dynamicPeriods = [];
+                }
+
+                await loadTeachers();
+            } catch (err) {
+                console.error(err);
+                showError('Error loading filters.');
+            }
+        }
+
+        // --- Period Management Functions ---
+        let editingPeriodId = null;
+
+        async function loadPeriods() {
+            await loadFilters();
+            loadWorkload();
+        }
+
+        function openAddModal() {
+            editingPeriodId = null;
+            document.getElementById('periodModalTitle').innerText = "Add Period";
+            document.getElementById('periodName').value = "";
+            document.getElementById('startTime').value = "";
+            document.getElementById('endTime').value = "";
+            document.getElementById('periodModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id, name, start, end) {
+            editingPeriodId = id;
+            document.getElementById('periodModalTitle').innerText = "Edit Period";
+            document.getElementById('periodName').value = name;
+            document.getElementById('startTime').value = start;
+            document.getElementById('endTime').value = end;
+            document.getElementById('periodModal').classList.remove('hidden');
+        }
+
+        function closePeriodModal() {
+            document.getElementById('periodModal').classList.add('hidden');
+        }
+
+        async function savePeriod() {
+            const name = document.getElementById('periodName').value.trim();
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+
+            if (!name || !start || !end) {
+                if (window.showWarning) window.showWarning('Please fill all fields');
+                else alert('Please fill all fields');
+                return;
+            }
+
+            try {
+                let error;
+                if (editingPeriodId) {
+                    const { error: err } = await sb.from('periods')
+                        .update({ name, start_time: start, end_time: end })
+                        .eq('id', editingPeriodId);
+                    error = err;
+                } else {
+                    const { error: err } = await sb.from('periods')
+                        .insert([{ name, start_time: start, end_time: end, order_index: Date.now() }]);
+                    error = err;
+                }
+
+                if (error) throw error;
+
+                if (window.showSuccess) window.showSuccess(`Period ${editingPeriodId ? 'updated' : 'added'} successfully`);
+                closePeriodModal();
+                await loadPeriods();
+            } catch (err) {
+                console.error('Save period error:', err);
+                if (window.showError) window.showError('Failed to save period: ' + err.message);
+                else alert('Failed to save period');
+            }
+        }
+
+
+        async function loadWorkload(teacherId = null) {
+            const tid = (teacherId && typeof teacherId === 'string') ? teacherId : document.getElementById('selTeacher').value;
+            const dayFilter = document.getElementById('selDay').value;
+            const loader = document.getElementById('loader');
+            const ghost = document.getElementById('ghost');
+            const cont = document.getElementById('gridCont');
+            const stats = document.getElementById('statsCont');
+
+            if (!tid) {
+                stats.style.display = 'none';
+                cont.style.display = 'none';
+                ghost.style.display = 'block';
+                return;
+            }
+
+            loader.style.display = 'flex';
+            ghost.style.display = 'none';
+            cont.style.display = 'none';
+            stats.style.display = 'none';
+
+            try {
+                // ── READ from teacher_workload (the correct table for manual workload assignments)
+                let query = sb.from('teacher_workload')
+                    .select('id, teacher_id, teacher_name, day, period, subject, branch, year, semester, section, is_manual, group_id')
+                    .eq('teacher_id', tid);
+
+                if (dayFilter && dayFilter !== 'ALL') {
+                    query = query.eq('day', dayFilter);
+                }
+
+                const { data: rawSchedule, error: sErr } = await query;
+
+                if (sErr) {
+                    console.error('Supabase Error [teacher_workload]:', sErr);
+                    showToast('Error loading schedule: ' + sErr.message, true);
+                    loader.style.display = 'none';
+                    return;
+                }
+
+                // Build lunch period name set for client-side filtering
+                const lunchNames = new Set(
+                    dynamicPeriods.filter(p => p.isLunch).map(p => p.name.toUpperCase())
+                );
+
+                // Filter out lunch rows
+                const schedule = (rawSchedule || [])
+                    .filter(row => !lunchNames.has((row.period || '').toUpperCase()));
+
+                // Store globally so click handlers can read it
+                window.currentSchedule = schedule;
+                window.currentTeacherId = tid;
+                console.log('teacher_workload loaded:', schedule.length, 'rows for teacher', tid);
+                renderGrid(schedule, dayFilter);
+            } catch (err) {
+                console.error('JS Error:', err);
+                showToast('Failed to load workload: ' + err.message, true);
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function renderGrid(schedule, dayFilter) {
+            const grid = document.getElementById('ttGrid');
+            const cont = document.getElementById('gridCont');
+            const stats = document.getElementById('statsCont');
+            const ghost = document.getElementById('ghost');
+
+            grid.innerHTML = '';
+            ghost.style.display = 'none';
+            grid.style.gridTemplateColumns = `80px repeat(${dynamicPeriods.length}, 110px)`;
+
+            // Headers
+            const headLabel = document.createElement('div');
+            headLabel.className = 'tt-th';
+            headLabel.style.left = '0';
+            headLabel.style.zIndex = '50';
+            headLabel.innerHTML = `Day<br>
+                <div style="margin-top: 8px; display: flex; gap: 4px;">
+                    <button onclick="openAddModal()" style="background:var(--blue); color:white; border:none; padding:4px 8px; border-radius:6px; font-size:10px; cursor:pointer;" title="Add new period">+ Add Period</button>
+                </div>`;
+            grid.appendChild(headLabel);
+
+            dynamicPeriods.forEach(p => {
+                const headCell = document.createElement('div');
+                headCell.className = 'tt-th';
+                headCell.innerHTML = `
+                    <div style="display:flex; flex-direction:column; gap:2px; align-items:center;">
+                        ${p.name}
+                        <span style="font-size:10px; opacity:0.7">${p.start} - ${p.end}</span>
+                        <div style="display:flex; gap:4px; margin-top:4px;">
+                            <button onclick="openEditModal('${p.id}', '${p.name}', '${p.start}', '${p.end}')" style="background:rgba(26, 79, 219, 0.1); color:var(--blue); border:none; padding:2px 6px; border-radius:4px; cursor:pointer; font-size:10px;">✎</button>
+                            <button class="delete-btn" data-action="delete" data-id="${p.id}" data-table="periods" style="background:rgba(229, 62, 90, 0.1); color:var(--red); border:none; padding:2px 6px; border-radius:4px; cursor:pointer; font-size:10px;">✕</button>
+                        </div>
+                    </div>`;
+                grid.appendChild(headCell);
+            });
+
+            const renderDays = dayFilter === 'ALL' ? DAYS : DAYS.filter(d => d.substring(0, 3).toUpperCase() === dayFilter);
+
+            let totalClasses = 0;
+            let totalConflicts = 0;
+            let totalFree = 0;
+
+            renderDays.forEach(day => {
+                const dayCode = day.substring(0, 3).toUpperCase();
+
+                const dayLabel = document.createElement('div');
+                dayLabel.className = 'tt-row-label';
+                dayLabel.textContent = dayCode;
+                grid.appendChild(dayLabel);
+
+                dynamicPeriods.forEach(p => {
+                    const cell = document.createElement('div');
+                    cell.className = 'tt-cell';
+
+                    if (p.isLunch) {
+                        cell.innerHTML = `<div class="cell-content bg-lunch">LUNCH</div>`;
+                        grid.appendChild(cell);
+                        return;
+                    }
+
+                    // ── FIXED: Compare day codes properly (DB may store full day or 3-char code)
+                    const overlapping = schedule.filter(s => {
+                        const sDay = (s.day || '').toUpperCase();
+                        // Accept both 'MON' and 'Monday' formats
+                        const sDayCode = sDay.length > 3 ? sDay.substring(0, 3) : sDay;
+                        const sPeriod = (s.period || '').toUpperCase();
+                        return sDayCode === dayCode && sPeriod === p.name.toUpperCase();
+                    });
+
+                    if (overlapping.length === 0) {
+                        // ── FREE SLOT: attach data attributes for event delegation
+                        cell.classList.add('timetable-cell', 'free-slot');
+                        cell.setAttribute('data-day', dayCode);
+                        cell.setAttribute('data-period', p.name);
+                        cell.setAttribute('data-slot', 'free');
+                        cell.style.cursor = 'pointer';
+                        cell.style.pointerEvents = 'auto';
+                        cell.innerHTML = '<div style="pointer-events:none; text-align:center; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;"><strong style="display:block;color:#0284c7;font-size:13px;">FREE</strong><span style="font-size:10px;color:#64748b;">Click to assign</span></div>';
+                        totalFree++;
+                    } else if (overlapping.length === 1) {
+                        const slot = overlapping[0];
+                        const subName = slot.subject || 'BUSY';
+                        cell.classList.add('timetable-cell', 'assigned-slot');
+                        cell.setAttribute('data-id', slot.id);
+                        cell.setAttribute('data-day', dayCode);
+                        cell.setAttribute('data-period', p.name);
+                        cell.style.cursor = 'pointer';
+                        cell.innerHTML = `
+                            <div class="cell-content bg-busy" style="background:var(--blue); position:relative; pointer-events:none;">
+                                ${escapeHTML(subName)}
+                                <span class="small">${escapeHTML(slot.branch || '')} ${escapeHTML(String(slot.year || ''))}-${escapeHTML(String(slot.semester || ''))}</span>
+                            </div>`;
+                        totalClasses++;
+                    } else {
+                        // ── REAL CONFLICT: multiple rows for same teacher+day+period
+                        cell.innerHTML = `
+                            <div class="cell-content bg-busy" style="pointer-events:none;">
+                                CONFLICT
+                                <span class="small">${overlapping.length} entries</span>
+                            </div>`;
+                        totalConflicts++;
+                    }
+
+                    grid.appendChild(cell);
+                });
+            });
+
+            document.getElementById('stTotal').textContent = totalClasses;
+            document.getElementById('stFree').textContent = totalFree;
+            document.getElementById('stConflicts').textContent = totalConflicts;
+
+            cont.style.display = 'block';
+            stats.style.display = 'grid';
+        }
+
+        function getSubjectCode(id) {
+            const sub = subjectsDB.find(s => s.id === id);
+            if (sub && sub.code) return sub.code;
+            if (sub && sub.name) return sub.name.substring(0, 8);
+            return 'Subject';
+        }
+
+        // ── Toast Notification ────────────────────────────────
+        function showToast(msg, isErr) {
+            const toast = document.getElementById('toastNotif');
+            const msgEl = document.getElementById('toastMsg');
+            msgEl.textContent = msg;
+            toast.style.background = isErr
+                ? 'linear-gradient(135deg,#e53e5a,#f97316)'
+                : 'linear-gradient(135deg,#1a4fdb,#0ea5e9)';
+            toast.querySelector('span').textContent = isErr ? '❌' : '✅';
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(80px)';
+            }, 3200);
+        }
+
+        // ── Period Chip Selector ───────────────────────────────
+        let chipSelStart = null; // period name e.g. 'P1'
+        let chipSelEnd = null;
+
+        function renderPeriodChips(startPeriod) {
+            const wrap = document.getElementById('periodChips');
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            chipSelStart = startPeriod || null;
+            chipSelEnd = startPeriod || null;
+
+            const nonLunch = (dynamicPeriods || []).filter(p => !p.isLunch);
+            nonLunch.forEach(p => {
+                const chip = document.createElement('div');
+                chip.className = 'p-chip';
+                chip.textContent = p.name;
+                chip.dataset.period = p.name;
+                chip.style.pointerEvents = 'auto';
+
+                chip.addEventListener('click', function () {
+                    const clicked = p.name;
+                    if (!chipSelStart) {
+                        chipSelStart = clicked;
+                        chipSelEnd = clicked;
+                    } else if (clicked === chipSelStart) {
+                        // reset
+                        chipSelStart = null;
+                        chipSelEnd = null;
+                    } else {
+                        // set end (ensure start < end by index)
+                        const startIdx = nonLunch.findIndex(x => x.name === chipSelStart);
+                        const clickIdx = nonLunch.findIndex(x => x.name === clicked);
+                        if (clickIdx < startIdx) {
+                            chipSelStart = clicked;
+                        } else {
+                            chipSelEnd = clicked;
+                        }
+                    }
+                    updateChipHighlight(nonLunch);
+                });
+
+                wrap.appendChild(chip);
+            });
+            updateChipHighlight(nonLunch);
+        }
+
+        function updateChipHighlight(nonLunch) {
+            const chips = document.querySelectorAll('.p-chip');
+            const startIdx = nonLunch.findIndex(p => p.name === chipSelStart);
+            const endIdx = nonLunch.findIndex(p => p.name === chipSelEnd);
+            chips.forEach((chip, i) => {
+                chip.classList.remove('chip-start', 'chip-in-range', 'chip-end');
+                if (i === startIdx) chip.classList.add('chip-start');
+                else if (i > startIdx && i < endIdx) chip.classList.add('chip-in-range');
+                else if (i === endIdx && i !== startIdx) chip.classList.add('chip-end');
+            });
+        }
+
+        function getSelectedPeriods() {
+            const nonLunch = (dynamicPeriods || []).filter(p => !p.isLunch);
+            if (!chipSelStart) return [];
+            const startIdx = nonLunch.findIndex(p => p.name === chipSelStart);
+            const endIdx = chipSelEnd ? nonLunch.findIndex(p => p.name === chipSelEnd) : startIdx;
+            const s = Math.min(startIdx, endIdx);
+            const e = Math.max(startIdx, endIdx);
+            return nonLunch.slice(s, e + 1).map(p => p.name);
+        }
+
+        function openModal(day, period, existingSlot = null, isManual = false) {
+            document.getElementById('modalDay').value = day;
+            document.getElementById('modalPeriod').value = period;
+
+            const title = document.getElementById('modalTitle');
+            const btnDel = document.getElementById('btnDeleteWorkload');
+            const btnSave = document.getElementById('btnSaveWorkload');
+
+            if (existingSlot && isManual) {
+                title.textContent = `Edit Workload (${day.substring(0, 3)} ${period})`;
+                document.getElementById('modalRecordId').value = existingSlot.id;
+                document.getElementById('btnDeleteWorkload').dataset.id = existingSlot.id;
+                document.getElementById('modSubject').value = existingSlot.subject || '';
+                document.getElementById('branchSelect').value = existingSlot.branch || 'AI';
+                document.getElementById('modYear').value = existingSlot.year || 1;
+                document.getElementById('modSem').value = existingSlot.semester || 1;
+                document.getElementById('modSec').value = existingSlot.section || 'None';
+
+                btnDel.style.display = 'block';
+                btnSave.textContent = "Update Assignment";
+            } else {
+                title.textContent = `Assign Manual Workload (${day.substring(0, 3)} ${period})`;
+                document.getElementById('modalRecordId').value = '';
+                document.getElementById('modSubject').value = '';
+                document.getElementById('branchSelect').value = 'AI';
+                document.getElementById('modYear').value = '1';
+                document.getElementById('modSem').value = '1';
+                document.getElementById('modSec').value = 'None';
+
+                btnDel.style.display = 'none';
+                btnSave.textContent = "Save Assignment";
+            }
+
+            document.getElementById('backdrop').classList.add('show');
+            document.getElementById('workloadModal').classList.add('show');
+            // Render period chips and pre-select the clicked period
+            renderPeriodChips(period);
+        }
+
+        function closeModal() {
+            document.getElementById('backdrop').classList.remove('show');
+            document.getElementById('workloadModal').classList.remove('show');
+            chipSelStart = null; chipSelEnd = null;
+        }
+
+        async function deleteAssignment(btn) {
+            const recordId = document.getElementById('modalRecordId').value;
+            if (!recordId) {
+                if (window.showError) window.showError('No record ID found — cannot delete.');
+                else alert('No record ID found — cannot delete.');
+                return;
+            }
+
+            // --- USE CUSTOM POPUP ---
+            const ok = await window.showConfirm("Remove this assignment?", {
+                title: "Delete Assignment",
+                confirmText: "Remove",
+                danger: true
+            });
+            if (!ok) return;
+
+            // --- LOADING STATE START ---
+            btn.disabled = true;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" style="animation:spin 0.8s linear infinite; width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:3; margin-right:8px;"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg> Deleting...`;
+
+            try {
+                // 1. Fetch record to check for group_id
+                const { data: record } = await sb
+                    .from('teacher_workload')
+                    .select('group_id, teacher_id, day, period')
+                    .eq('id', recordId)
+                    .single();
+
+                let deleteQuery = sb.from('teacher_workload').delete();
+
+                if (record && record.group_id) {
+                    console.log(`[Delete] Removing multi-period group: ${record.group_id}`);
+                    deleteQuery = deleteQuery.eq('group_id', record.group_id);
+                } else {
+                    console.log(`[Delete] Removing single period: ${recordId}`);
+                    deleteQuery = deleteQuery.eq('id', recordId);
+                }
+
+                const { error } = await deleteQuery;
+                if (error) throw error;
+
+                // --- SUCCESS ---
+                closeModal();
+                await loadWorkload();
+                if (window.showSuccess) window.showSuccess('Assignment removed successfully');
+                else showToast('Assignment removed successfully');
+
+            } catch (err) {
+                console.error('Delete error:', err);
+                const msg = 'Delete failed: ' + (err.message || 'Unknown error');
+                if (window.showError) window.showError(msg);
+                else showToast(msg, true);
+            } finally {
+                // --- LOADING STATE RESET (CRITICAL) ---
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+        async function saveManualWorkload() {
+            const tid = document.getElementById('selTeacher').value;
+            const day = document.getElementById('modalDay').value;
+            const sub = document.getElementById('modSubject').value.trim();
+            const branch = document.getElementById('branchSelect').value || 'AI';
+            const year = parseInt(document.getElementById('modYear').value) || 1;
+            const sem = parseInt(document.getElementById('modSem').value) || 1;
+            const sec = document.getElementById('modSec').value || 'None';
+            const existingId = document.getElementById('modalRecordId').value;
+
+            // Resolve teacher name for teacher_workload.teacher_name field
+            const teacherSelect = document.getElementById('selTeacher');
+            const teacherName = teacherSelect.options[teacherSelect.selectedIndex]?.text || '';
+
+            // Get all selected periods from chip selector; fallback to hidden input
+            let periodsToSave = getSelectedPeriods();
+            if (!periodsToSave.length) {
+                const fallback = document.getElementById('modalPeriod').value;
+                if (fallback) periodsToSave = [fallback];
+            }
+
+            // Validate inputs
+            if (!tid) { showToast('No teacher selected', true); return; }
+            if (!day) { showToast('Day not captured — please re-click the slot', true); return; }
+            if (!periodsToSave.length) { showToast('Please select at least one period', true); return; }
+            if (!sub) { showToast('Please enter Subject name', true); return; }
+
+            const btnSave = document.getElementById('btnSaveWorkload');
+            btnSave.disabled = true;
+            btnSave.textContent = 'Saving…';
+
+            try {
+                // If editing a single existing record (Edit modal), just update it
+                if (existingId) {
+                    const { error: updErr } = await sb.from('teacher_workload')
+                        .update({ subject: sub, branch, year, semester: sem, section: sec, teacher_name: teacherName })
+                        .eq('id', existingId);
+                    if (updErr) throw updErr;
+
+                    closeModal();
+                    await loadWorkload();
+                    if (window.showSuccess) window.showSuccess('Assignment updated successfully');
+                    else showToast('Assignment updated successfully');
+                    return;
+                }
+
+                // ── NEW ASSIGNMENT: loop each selected period
+                let saved = 0;
+                let skipped = [];
+                const groupId = periodsToSave.length > 1 ? crypto.randomUUID() : null;
+
+                for (const p of periodsToSave) {
+                    // Check if this teacher already has a workload at this day+period
+                    const { data: existing, error: checkErr } = await sb
+                        .from('teacher_workload')
+                        .select('id, subject')
+                        .eq('teacher_id', tid)
+                        .eq('day', day)
+                        .eq('period', p)
+                        .maybeSingle();
+
+                    if (checkErr) throw new Error('DB check error for ' + p + ': ' + checkErr.message);
+
+                    if (existing && existing.id) {
+                        // Period already assigned — skip (don't overwrite silently)
+                        skipped.push(p);
+                        continue;
+                    }
+
+                    // Build row for teacher_workload
+                    const rowData = {
+                        teacher_id: tid,
+                        teacher_name: teacherName,
+                        day,
+                        period: p,
+                        subject: sub,
+                        branch,
+                        year,
+                        semester: sem,
+                        section: sec,
+                        is_manual: true,
+                        group_id: groupId
+                    };
+
+                    console.log('Inserting into teacher_workload:', rowData);
+                    const { error: insErr } = await sb.from('teacher_workload').insert([rowData]);
+                    if (insErr) {
+                        console.error('Insert error:', insErr);
+                        throw insErr;
+                    }
+                    saved++;
+                }
+
+                closeModal();
+                await loadWorkload();
+
+                const periodStr = periodsToSave.length > 1
+                    ? `${periodsToSave[0]} → ${periodsToSave[periodsToSave.length - 1]}`
+                    : periodsToSave[0];
+
+                if (skipped.length > 0) {
+                    const msg = `${saved} saved, ${skipped.length} skipped (already assigned: ${skipped.join(', ')})`;
+                    if (window.showWarning) window.showWarning(msg);
+                    else showToast(msg, false);
+                } else {
+                    const msg = `${saved} period${saved > 1 ? 's' : ''} saved — ${day} ${periodStr}`;
+                    if (window.showSuccess) window.showSuccess(msg);
+                    else showToast(msg);
+                }
+
+            } catch (err) {
+                console.error('Save error:', err);
+                const msg = 'Save failed: ' + (err.message || 'Unknown error');
+                if (window.showError) window.showError(msg);
+                else showToast(msg, true);
+            } finally {
+                btnSave.disabled = false;
+                btnSave.textContent = 'Save Assignment';
+            }
+        }
+
+        // ── FIXED: openAssignModal always sets both hidden inputs + window.selectedSlot
+        window.openAssignModal = function (day, period) {
+            console.log('[openAssignModal] day=' + day + ' period=' + period);
+            window.selectedSlot = { day: day, period: period };
+            // Ensure hidden inputs are set BEFORE openModal reads them via selectedSlot
+            document.getElementById('modalDay').value = day;
+            document.getElementById('modalPeriod').value = period;
+            openModal(day, period, null, false);
+        };
+
+    </script>
+
+    <!-- EVENT DELEGATION: handles clicks on dynamically-rendered grid cells -->
+    <script>
+        (function () {
+            'use strict';
+
+            function handleGridClick(e) {
+                // Walk up DOM from clicked element
+                var el = e.target;
+
+                while (el && el !== document.body) {
+                    // ── FREE SLOT click
+                    if (el.getAttribute && el.getAttribute('data-slot') === 'free') {
+                        var day = el.getAttribute('data-day');
+                        var period = el.getAttribute('data-period');
+                        if (day && period) {
+                            console.log('[Grid] FREE slot clicked — day:', day, 'period:', period);
+                            if (typeof window.openAssignModal === 'function') {
+                                window.openAssignModal(day, period);
+                            }
+                        }
+                        return;
+                    }
+
+                    // ── ASSIGNED SLOT click (edit existing)
+                    if (el.classList && el.classList.contains('assigned-slot')) {
+                        var day = el.getAttribute('data-day');
+                        var period = el.getAttribute('data-period');
+                        var recordId = el.getAttribute('data-id');
+                        if (day && period) {
+                            console.log('[Grid] ASSIGNED slot clicked — day:', day, 'period:', period, 'id:', recordId);
+                            window.selectedSlot = { day: day, period: period, recordId: recordId };
+                            var slot = null;
+                            if (recordId && window.currentSchedule) {
+                                slot = window.currentSchedule.find(function (s) {
+                                    return String(s.id) === String(recordId);
+                                });
+                            }
+                            if (typeof openModal === 'function') {
+                                openModal(day, period, slot || null, slot ? true : false);
+                            }
+                        }
+                        return;
+                    }
+
+                    el = el.parentElement;
+                }
+            }
+
+            // Single listener on document — survives dynamic grid re-renders
+            document.addEventListener('click', handleGridClick);
+            console.log('[SVPP] Grid click delegation attached.');
+        })();
+    </script>
+</body>
+
+</html>

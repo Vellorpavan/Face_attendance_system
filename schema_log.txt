@@ -1,0 +1,4 @@
+--- Checking student_requests table ---
+student_requests Columns: id, uid, name, roll_number, year, semester, branch, section, face_image_url, status, created_at
+--- Checking notifications table ---
+No records found in notifications table.

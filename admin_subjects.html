@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Manage Subjects — SVPP ATTENDANCE (FACE RECOGNITION)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <script src="actions.js" defer></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue: #1a4fdb;
+            --blue-soft: rgba(26, 79, 219, 0.08);
+            --blue-border: rgba(26, 79, 219, 0.12);
+            --green: #12b76a;
+            --green-soft: rgba(18, 183, 106, 0.09);
+            --red: #e53e5a;
+            --red-soft: rgba(229, 62, 90, 0.09);
+            --amber: #f59e0b;
+            --purple: #7c3aed;
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f1f5ff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.07);
+        }
+
+        html,
+        body {
+            min-height: 100%;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp)
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -80px;
+            right: -60px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(100, 165, 255, 0.18) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
+            padding-bottom: 48px;
+            animation: pageIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both
+        }
+
+        @keyframes pageIn {
+            from {
+                opacity: 0;
+                transform: translateY(14px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 52px 20px 24px
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 13px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.15s
+        }
+
+        .back-btn:active {
+            transform: scale(0.9)
+        }
+
+        .back-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: var(--tp);
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--tp);
+            letter-spacing: -0.3px
+        }
+
+        .header-sub {
+            font-size: 12.5px;
+            color: var(--ts);
+            margin-top: 2px
+        }
+
+        .count-badge {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--blue);
+            margin-left: auto;
+            flex-shrink: 0
+        }
+
+        /* Form card */
+        .form-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 24px 22px;
+            margin: 0 18px 24px;
+            box-shadow: 0 4px 24px rgba(26, 79, 219, 0.09);
+            border: 1px solid var(--border)
+        }
+
+        .form-card-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .form-card-title svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--green);
+            fill: none;
+            stroke-width: 2
+        }
+
+        /* Two-col row */
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px
+        }
+
+        .field {
+            margin-bottom: 14px
+        }
+
+        .field.no-mb {
+            margin-bottom: 0
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--ts);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            margin-bottom: 8px
+        }
+
+        /* Custom select wrapper */
+        .select-wrap {
+            position: relative
+        }
+
+        .select-wrap::after {
+            content: '';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid var(--tm);
+            pointer-events: none
+        }
+
+        .select-wrap select,
+        .field input {
+            width: 100%;
+            padding: 13px 14px;
+            border-radius: 14px;
+            border: 1.5px solid var(--border);
+            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            font-size: 13.5px;
+            color: var(--tp);
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+            transition: border-color 0.2s, box-shadow 0.2s
+        }
+
+        .select-wrap select:focus,
+        .field input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3.5px rgba(26, 79, 219, 0.1);
+            background: #fff
+        }
+
+        .select-wrap select.error,
+        .field input.error {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(229, 62, 90, 0.1)
+        }
+
+        /* Input with icon */
+        .input-wrap {
+            position: relative
+        }
+
+        .input-wrap svg {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 1.8;
+            pointer-events: none
+        }
+
+        .input-wrap input {
+            padding-left: 40px
+        }
+
+        /* Locked field */
+        .locked-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--blue-soft);
+            border: 1.5px solid var(--blue-border);
+            border-radius: 14px;
+            padding: 13px 14px;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--blue)
+        }
+
+        .locked-chip svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--blue);
+            fill: none;
+            stroke-width: 2
+        }
+
+        .field-hint {
+            font-size: 11px;
+            color: var(--tm);
+            margin-top: 5px;
+            padding-left: 2px
+        }
+
+        .field-hint.err {
+            color: var(--red)
+        }
+
+        /* Add button */
+        .btn-add {
+            width: 100%;
+            padding: 15px 0;
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, #12b76a, #0ea560);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 14.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 6px 22px rgba(18, 183, 106, 0.32);
+            transition: transform 0.18s, box-shadow 0.18s;
+            margin-top: 4px
+        }
+
+        .btn-add svg {
+            width: 17px;
+            height: 17px;
+            stroke: #fff;
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(18, 183, 106, 0.42)
+        }
+
+        .btn-add:active {
+            transform: scale(0.97)
+        }
+
+        .btn-add:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none
+        }
+
+        /* Filter chips */
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            padding: 0 18px 14px;
+            overflow-x: auto;
+            scrollbar-width: none
+        }
+
+        .filter-row::-webkit-scrollbar {
+            display: none
+        }
+
+        .chip {
+            flex-shrink: 0;
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1.5px solid var(--border);
+            background: var(--card);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--ts);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap
+        }
+
+        .chip.active {
+            background: var(--blue-soft);
+            border-color: var(--blue-border);
+            color: var(--blue)
+        }
+
+        /* List */
+        .list-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 22px 12px
+        }
+
+        .list-head h2 {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--tp)
+        }
+
+        .list-head span {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--tm)
+        }
+
+        .subject-list {
+            padding: 0 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px
+        }
+
+        .group-header {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--ts);
+            padding: 18px 4px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .group-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .subject-row {
+            background: var(--card);
+            border-radius: 18px;
+            padding: 16px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 2px 12px rgba(26, 79, 219, 0.06);
+            border: 1px solid var(--border);
+            animation: rowIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+            transition: transform 0.15s
+        }
+
+        .subject-row:active {
+            transform: scale(0.98)
+        }
+
+        @keyframes rowIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .s-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center
+        }
+
+        .s-icon svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke-width: 1.9
+        }
+
+        .s-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .s-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--tp);
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .s-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap
+        }
+
+        .s-tag {
+            background: var(--blue-soft);
+            border: 1px solid var(--blue-border);
+            border-radius: 999px;
+            padding: 2px 9px;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--blue)
+        }
+
+        .s-tag.green {
+            background: var(--green-soft);
+            border-color: rgba(18, 183, 106, 0.2);
+            color: var(--green)
+        }
+
+        .delete-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            background: var(--red-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: transform 0.15s, background 0.15s
+        }
+
+        .delete-btn:hover {
+            background: rgba(229, 62, 90, 0.18)
+        }
+
+        .delete-btn:active {
+            transform: scale(0.88)
+        }
+
+        .delete-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--red);
+            fill: none;
+            stroke-width: 2.2
+        }
+
+        /* Empty */
+        .empty-state {
+            text-align: center;
+            padding: 40px 30px;
+            color: var(--tm)
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            stroke: #cbd9f0;
+            fill: none;
+            stroke-width: 1.4;
+            margin-bottom: 14px
+        }
+
+        .empty-state p {
+            font-size: 13.5px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: var(--ts)
+        }
+
+        .empty-state small {
+            font-size: 12px
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 999px;
+            padding: 9px 20px;
+            z-index: 99;
+            font-size: 12.5px;
+            font-weight: 600;
+            backdrop-filter: blur(12px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            white-space: nowrap
+        }
+
+        .toast.green {
+            background: rgba(18, 183, 106, 0.15);
+            border: 1px solid rgba(18, 183, 106, 0.4);
+            color: var(--green)
+        }
+
+        .toast.red {
+            background: rgba(229, 62, 90, 0.12);
+            border: 1px solid rgba(229, 62, 90, 0.35);
+            color: var(--red)
+        }
+
+        .toast.show {
+            opacity: 1
+        }
+
+        /* Skeleton */
+        .skel {
+            background: linear-gradient(90deg, #e4ecff 25%, #f1f5ff 50%, #e4ecff 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 18px;
+            height: 76px;
+            margin-bottom: 10px
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0
+            }
+
+            100% {
+                background-position: -200% 0
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="back-btn"
+                onclick="if(document.referrer) { history.back(); } else { window.location.href='admin_dashboard.html'; }">
+                <svg viewBox="0 0 24 24">
+                    <path d="M19 12H5M12 5l-7 7 7 7" />
+                </svg>
+            </div>
+            <div>
+                <div class="header-title">Manage Subjects</div>
+                <div class="header-sub">Create and manage subjects</div>
+            </div>
+            <div class="count-badge" id="countBadge">—</div>
+        </div>
+
+        <!-- Add subject form -->
+        <div class="form-card">
+            <div class="form-card-title">
+                <svg viewBox="0 0 24 24">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+                </svg>
+                Add New Subject
+            </div>
+
+            <!-- Year + Semester -->
+            <div class="field-row">
+                <div class="field no-mb">
+                    <label>Year</label>
+                    <div class="select-wrap">
+                        <select id="yearSel">
+                            <option value="">Select year</option>
+                            <option value="1">1st Year</option>
+                            <option value="2">2nd Year</option>
+                            <option value="3">3rd Year</option>
+                            <option value="4">4th Year</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field no-mb">
+                    <label>Semester</label>
+                    <div class="select-wrap">
+                        <select id="semSel">
+                            <option value="">Select</option>
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Branch (locked) + Subject Name -->
+            <div class="field-row" style="margin-top:14px">
+                <div class="field no-mb">
+                    <label>Branch</label>
+                    <div class="locked-chip">
+                        <svg viewBox="0 0 24 24">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        AI
+                    </div>
+                </div>
+                <div class="field no-mb">
+                    <label>Subject Code</label>
+                    <input type="text" id="codeInput" placeholder="e.g. AI301" style="padding:13px 14px"
+                        autocomplete="off" />
+                </div>
+            </div>
+
+            <!-- Subject Name -->
+            <div class="field" style="margin-top:14px">
+                <label>Subject Name</label>
+                <div class="input-wrap">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                    </svg>
+                    <input type="text" id="nameInput" placeholder="e.g. AI Fundamentals" autocomplete="off" />
+                </div>
+                <div class="field-hint" id="nameHint"></div>
+            </div>
+
+            <button class="btn-add" id="addBtn" onclick="addSubject()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 5v14M5 12h14" />
+                </svg>
+                Add Subject
+            </button>
+        </div>
+
+        <!-- Filter chips -->
+        <div class="filter-row" id="filterRow">
+            <div class="chip active" onclick="setFilter('all',this)">All</div>
+            <div class="chip" onclick="setFilter('1',this)">1st Year</div>
+            <div class="chip" onclick="setFilter('2',this)">2nd Year</div>
+            <div class="chip" onclick="setFilter('3',this)">3rd Year</div>
+            <div class="chip" onclick="setFilter('4',this)">4th Year</div>
+        </div>
+
+        <!-- Subject list -->
+        <div class="list-head">
+            <h2>Added Subjects</h2>
+            <span id="listCount">Loading…</span>
+        </div>
+        <div class="subject-list" id="subjectList">
+            <div class="skel"></div>
+            <div class="skel"></div>
+            <div class="skel"></div>
+        </div>
+
+    </div>
+    </div>
+
+
+    <script>
+        let subjects = [];
+        let activeFilter = 'all';
+        let currentUser = null;
+
+        const ICONS = {
+            default: { bg: '#e8f0ff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#1a4fdb" stroke-width="1.9"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>` },
+            1: { bg: '#e8f0ff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#1a4fdb" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>` },
+            2: { bg: '#edfaf3', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#12b76a" stroke-width="1.9"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>` },
+            3: { bg: '#fff8ec', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.9"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v4c0 1.66 4 3 9 3s9-1.34 9-3V5M3 9v4c0 1.66 4 3 9 3s9-1.34 9-3V9"/></svg>` },
+            4: { bg: '#f5eeff', svg: `<svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="1.9"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 8v5l3 3"/></svg>` },
+        };
+
+        const yearLabel = y => ({ '1': '1st Year', '2': '2nd Year', '3': '3rd Year', '4': '4th Year' }[y] || y);
+        const semLabel = s => `Sem ${s}`;
+
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['admin']);
+            if (!session) return;
+            currentUser = session.user;
+            await loadSubjects();
+
+            // Feature 1: Auto Capitalization & Trim Spaces while typing
+            const codeInput = document.getElementById('codeInput');
+            codeInput.addEventListener('input', () => {
+                // Convert to uppercase and remove ALL spaces as requested
+                const start = codeInput.selectionStart;
+                const end = codeInput.selectionEnd;
+                const originalVal = codeInput.value;
+                const newVal = originalVal.toUpperCase().replace(/\s+/g, '');
+
+                if (originalVal !== newVal) {
+                    codeInput.value = newVal;
+                    // Maintain cursor position if possible (though shrinking might shift it)
+                    codeInput.setSelectionRange(start, end);
+                }
+            });
+        });
+
+        async function loadSubjects() {
+            const { data, error } = await sb.from('subjects').select('*').order('year').order('semester').order('name');
+            if (error) { console.error(error); return; }
+            subjects = data || [];
+            renderList();
+        }
+
+        function setFilter(val, el) {
+            activeFilter = val;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            renderList();
+        }
+
+        function renderList() {
+            const filtered = activeFilter === 'all' ? subjects : subjects.filter(s => s.year === activeFilter);
+            document.getElementById('countBadge').textContent = `${subjects.length} subject${subjects.length !== 1 ? 's' : ''}`;
+            document.getElementById('listCount').textContent = `${filtered.length} showing`;
+
+            const container = document.getElementById('subjectList');
+            if (!filtered.length) {
+                container.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <p>${activeFilter === 'all' ? 'No subjects added yet' : `No ${yearLabel(activeFilter)} subjects`}</p>
+          <small>Add a subject using the form above</small>
+        </div>`;
+                return;
+            }
+
+            let lastGroup = "";
+            let html = "";
+            
+            filtered.forEach((s, i) => {
+                const currentGroup = `${s.year}-${s.semester}`;
+                if (currentGroup !== lastGroup) {
+                    html += `<div class="group-header">${yearLabel(s.year)} — ${semLabel(s.semester)}</div>`;
+                    lastGroup = currentGroup;
+                }
+
+                const ic = ICONS[s.year] || ICONS.default;
+                const nameEsc = escapeHTML(s.name);
+                const codeEsc = escapeHTML(s.code || '');
+                const branchEsc = escapeHTML(s.branch || '');
+
+                html += `
+                <div class="subject-row" id="row-${s.id}" style="animation-delay:${i * 0.04}s">
+                    <div class="s-icon" style="background:${ic.bg}">${ic.svg}</div>
+                    <div class="s-info">
+                        <div class="s-name">${nameEsc}</div>
+                        <div class="s-tags">
+                            <span class="s-tag">${yearLabel(s.year)}</span>
+                            <span class="s-tag">${semLabel(s.semester)}</span>
+                            <span class="s-tag green">${branchEsc}</span>
+                            ${codeEsc ? `<span class="s-tag">${codeEsc}</span>` : ''}
+                        </div>
+                    </div>
+                    <button class="delete-btn" 
+                            data-action="delete" 
+                            data-id="${s.id}" 
+                            data-table="subjects" 
+                            data-row="#row-${s.id}"
+                            title="Delete">
+                        <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                </div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Page-specific action success handler
+        document.addEventListener('actionSuccess', (e) => {
+            const { action, id } = e.detail;
+            if (action === 'delete') {
+                subjects = subjects.filter(s => s.id !== id);
+                document.getElementById('countBadge').textContent = `${subjects.length} subjects`;
+                const filteredCount = activeFilter === 'all' ? subjects.length : subjects.filter(s => s.year === activeFilter).length;
+                document.getElementById('listCount').textContent = `${filteredCount} showing`;
+                if (filteredCount === 0) renderList();
+            }
+        });
+
+        async function addSubject() {
+            const year = document.getElementById('yearSel').value;
+            const sem = document.getElementById('semSel').value;
+            const code = document.getElementById('codeInput').value.trim().toUpperCase();
+            const name = document.getElementById('nameInput').value.trim();
+
+            // Validation
+            let valid = true;
+            if (!year) { document.getElementById('yearSel').classList.add('error'); valid = false; }
+            else document.getElementById('yearSel').classList.remove('error');
+            if (!sem) { document.getElementById('semSel').classList.add('error'); valid = false; }
+            else document.getElementById('semSel').classList.remove('error');
+            if (!name) {
+                document.getElementById('nameInput').classList.add('error');
+                document.getElementById('nameHint').textContent = 'Subject name is required';
+                document.getElementById('nameHint').className = 'field-hint err';
+                valid = false;
+            } else {
+                document.getElementById('nameInput').classList.remove('error');
+                document.getElementById('nameHint').textContent = '';
+                document.getElementById('nameHint').className = 'field-hint';
+            }
+            if (!valid) return;
+
+            // Feature 2: Prevent Duplicate Subject Codes
+            if (code) {
+                const { data: existing, error: checkError } = await sb
+                    .from('subjects')
+                    .select('id')
+                    .eq('code', code)
+                    .maybeSingle();
+
+                if (checkError) {
+                    showError('Error checking duplicates: ' + checkError.message);
+                    return;
+                }
+
+                if (existing) {
+                    document.getElementById('codeInput').classList.add('error');
+                    document.getElementById('nameHint').textContent = 'Subject code already exists.';
+                    document.getElementById('nameHint').className = 'field-hint err';
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('addBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<svg viewBox="0 0 24 24" style="animation:spin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.22-8.56"/></svg> Adding…`;
+
+            const { error } = await sb.from('subjects').insert({
+                name, code: code || null, year, semester: sem, branch: 'AI'
+            });
+
+            btn.disabled = false;
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Add Subject`;
+
+            if (error) {
+                if (error.code === '23505') {
+                    document.getElementById('codeInput').classList.add('error');
+                    document.getElementById('nameHint').textContent = 'A subject with this code already exists';
+                    document.getElementById('nameHint').className = 'field-hint err';
+                } else {
+                    showError('Error: ' + error.message);
+                }
+                return;
+            }
+
+            // Clear form
+            document.getElementById('yearSel').value = '';
+            document.getElementById('semSel').value = '';
+            document.getElementById('codeInput').value = '';
+            document.getElementById('nameInput').value = '';
+
+            showToast(`✓ "${name}" added`, 'green');
+            await loadSubjects();
+        }
+
+    </script>
+</body>
+
+</html>

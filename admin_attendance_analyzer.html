@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="security_protections.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Attendance Analyzer — Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="config.js"></script>
+    <script src="supabase_config.js"></script>
+    <script src="feedback.js"></script>
+    <script src="notification.js"></script>
+    <style>
+        :root {
+            --blue: #1a4fdb;
+            --blue-mid: #2a62f0;
+            --blue-soft: rgba(26, 79, 219, 0.06);
+            --green: #12b76a;
+            --amber: #f59e0b;
+            --rose: #e53e5a;
+            --tp: #0d1b3e;
+            --ts: #4a6080;
+            --tm: #8fa4c0;
+            --bg: #f8faff;
+            --card: #ffffff;
+            --border: rgba(26, 79, 219, 0.1);
+            --nav-h: 70px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--tp);
+            min-height: 100vh;
+            padding-bottom: 40px;
+        }
+
+        .header {
+            background: #fff;
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--blue-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blue);
+            text-decoration: none;
+        }
+
+        .header-title h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: var(--ts);
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ── Search Area ── */
+        .search-card {
+            background: #fff;
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        .search-inner {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .search-input-wrap {
+            position: relative;
+            flex: 1;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 16px 16px 48px;
+            border-radius: 16px;
+            border: 1.5px solid #edf2f7;
+            background: #fcfdfe;
+            font-size: 15px;
+            font-weight: 600;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .btn-search {
+            padding: 0 24px;
+            border-radius: 16px;
+            background: var(--blue);
+            color: #fff;
+            border: none;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-search:hover {
+            background: var(--blue-mid);
+        }
+
+        .btn-search:active {
+            transform: scale(0.95);
+        }
+
+        .search-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 4px var(--blue-soft);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            stroke: var(--tm);
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .filter-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--blue);
+            cursor: pointer;
+        }
+
+        .advanced-filters {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 16px;
+            animation: slideDown 0.3s ease;
+        }
+
+        .advanced-filters.show {
+            display: grid;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .f-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .f-group label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+        }
+
+        .f-group select,
+        .f-group input {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1.5px solid #edf2f7;
+            background: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        /* ── Summary Card ── */
+        .analytics-wrap {
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .analytics-wrap.show {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .profile-card {
+            background: linear-gradient(135deg, #1a4fdb, #2563eb);
+            border-radius: 28px;
+            padding: 24px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-card::after {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+        }
+
+        .p-info h2 {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .p-info p {
+            font-size: 13px;
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
+        .p-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .p-stat {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .p-val {
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .p-lbl {
+            font-size: 10px;
+            font-weight: 600;
+            opacity: 0.7;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        /* ── Subject Breakdown ── */
+        .section-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--tp);
+            margin-bottom: 4px;
+            padding-left: 4px;
+        }
+
+        .sub-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sub-card {
+            background: #fff;
+            padding: 16px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sub-main h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--tp);
+        }
+
+        .sub-main p {
+            font-size: 11px;
+            color: var(--ts);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .sub-perc {
+            font-size: 16px;
+            font-weight: 900;
+        }
+
+        .perc-high {
+            color: var(--green);
+        }
+
+        .perc-mid {
+            color: var(--amber);
+        }
+
+        .perc-low {
+            color: var(--rose);
+        }
+
+        /* ── Pattern Detection ── */
+        .insight-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 24px;
+            border: 1.5px dashed var(--border);
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+
+        .insight-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--blue-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 20px;
+        }
+
+        .insight-body h5 {
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .insight-body p {
+            font-size: 12.5px;
+            color: var(--ts);
+            line-height: 1.5;
+            margin-top: 4px;
+        }
+
+        /* ── Bulk View Table ── */
+        .bulk-card {
+            background: #fff;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .bulk-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .bulk-table th {
+            background: #f8faff;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+        }
+
+        .bulk-table td {
+            padding: 14px 16px;
+            border-top: 1px solid #f1f5f9;
+            font-size: 13.5px;
+            font-weight: 600;
+        }
+
+        .risk-badge {
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .risk-safe {
+            background: rgba(18, 183, 106, 0.1);
+            color: var(--green);
+        }
+
+        .risk-warn {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--amber);
+        }
+
+        .risk-crit {
+            background: rgba(229, 62, 90, 0.1);
+            color: var(--rose);
+        }
+
+        .student-row {
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .student-row:hover {
+            background: var(--blue-soft) !important;
+        }
+
+        /* ── Prediction ── */
+        .predict-banner {
+            background: #0f172a;
+            border-radius: 24px;
+            padding: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .predict-icon {
+            font-size: 28px;
+        }
+
+        .predict-text h6 {
+            font-size: 14px;
+            font-weight: 800;
+            color: #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .predict-text p {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        /* ── Action Bar ── */
+        .action-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 40px);
+            max-width: 560px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .action-bar button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 14px;
+            border: none;
+            font-weight: 800;
+            font-size: 13.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-export {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .btn-refresh {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .btn-export:active,
+        .btn-refresh:active {
+            transform: scale(0.96);
+        }
+
+        .loader-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--tm);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            stroke: var(--tm);
+            margin-bottom: 20px;
+            stroke-width: 1.5;
+        }
+
+        /* ── History Modal ── */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 27, 62, 0.4);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #fff;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            border-radius: 28px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: var(--blue-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--blue);
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .history-search-wrap {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .history-search {
+            width: 100%;
+            padding: 12px 12px 12px 40px;
+            border-radius: 12px;
+            border: 1.5px solid #edf2f7;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 10px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--ts);
+            text-transform: uppercase;
+            border-bottom: 1.5px solid var(--border);
+        }
+
+        .history-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .h-status {
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 8px;
+            border-radius: 6px;
+        }
+
+        .h-present {
+            background: rgba(18, 183, 106, 0.1);
+            color: var(--green);
+        }
+
+        .h-absent {
+            background: rgba(229, 62, 90, 0.1);
+            color: var(--rose);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+        <a href="admin_dashboard.html" class="back-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+        </a>
+        <div class="header-title">
+            <h1>Attendance Analyzer</h1>
+            <p>Smart patterns & patterns detection</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 1. Search Box -->
+        <div class="search-card">
+            <div class="search-inner">
+                <div class="search-input-wrap">
+                    <svg class="search-icon" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="text" id="smartInput" class="search-input"
+                        placeholder="Enter Roll Number (e.g. 21CS01)..." autocomplete="off">
+                </div>
+                <button class="btn-search" onclick="triggerSearch()">Search</button>
+            </div>
+
+            <div class="filter-toggle" onclick="toggleFilters()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+                </svg>
+                Advanced Filters
+            </div>
+
+            <div class="advanced-filters" id="advancedFilters">
+                <div class="f-group">
+                    <label>Year</label>
+                    <select id="fYear">
+                        <option value="1">Year 1</option>
+                        <option value="2">Year 2</option>
+                        <option value="3" selected>Year 3</option>
+                        <option value="4">Year 4</option>
+                    </select>
+                </div>
+                <div class="f-group">
+                    <label>Semester</label>
+                    <select id="fSemester">
+                        <option value="1">Sem 1</option>
+                        <option value="2">Sem 2</option>
+                    </select>
+                </div>
+                <div class="f-group">
+                    <label>Section</label>
+                    <select id="fSection">
+                        <option value="A" selected>A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="None">None</option>
+                    </select>
+                </div>
+                <div class="f-group">
+                    <label>Start Date</label>
+                    <input type="date" id="fStart">
+                </div>
+                <div class="f-group">
+                    <label>End Date</label>
+                    <input type="date" id="fEnd">
+                </div>
+                <button onclick="applyFilters()" class="btn-refresh"
+                    style="grid-column: span 2; padding: 10px; margin-top: 4px;">Load Section Report</button>
+            </div>
+        </div>
+
+        <!-- Placeholder / Loading -->
+        <div id="statusArea">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                    <path d="M8 11h6M11 8v6" />
+                </svg>
+                <p>Search for a student to see analysis or use filters for bulk reports.</p>
+            </div>
+        </div>
+
+        <!-- 2. Single Student Analysis -->
+        <div class="analytics-wrap" id="singleAnalysis">
+            <div class="profile-card">
+                <div class="p-info">
+                    <h2 id="stName">Loading...</h2>
+                    <p id="stMeta">Loading...</p>
+                </div>
+                <div class="p-stats">
+                    <div class="p-stat">
+                        <div class="p-val" id="stOverall">0%</div>
+                        <div class="p-lbl">Overall</div>
+                    </div>
+                    <div class="p-stat">
+                        <div class="p-val" id="stTotal">0</div>
+                        <div class="p-lbl">Total</div>
+                    </div>
+                    <div class="p-stat">
+                        <div class="p-val" id="stAbsent" style="color:#ffccd5">0</div>
+                        <div class="p-lbl">Absent</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="predict-banner">
+                <div class="predict-icon">🔮</div>
+                <div class="predict-text">
+                    <h6>Prediction Insight</h6>
+                    <p id="stPredict">Analyzing trends to predict future attendance status...</p>
+                </div>
+            </div>
+
+            <div class="section-title">Subject-wise Percentage</div>
+            <div class="sub-grid" id="stSubjects"></div>
+
+            <div class="section-title">Pattern Detection</div>
+            <div class="insight-card">
+                <div class="insight-icon">🕵️</div>
+                <div class="insight-body">
+                    <h5>Behavorial Analysis</h5>
+                    <p id="stPattern">No significant patterns detected yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Bulk Report View -->
+        <div class="analytics-wrap" id="bulkAnalysis">
+            <div class="section-title">Section Summary Report</div>
+            <div class="bulk-card">
+                <table class="bulk-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Roll No</th>
+                            <th>Attendance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bulkTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Bar -->
+    <div class="action-bar" id="actionBar" style="display:none">
+        <button class="btn-export" onclick="exportExcel()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            Export Excel
+        </button>
+        <button class="btn-refresh" onclick="refreshCurrent()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+            Refresh
+        </button>
+    </div>
+
+    <script>
+        let currentMode = 'idle'; // 'single' | 'bulk'
+        let currentStudentData = null;
+        let currentAttendanceData = [];
+        let allSubjects = [];
+        let lastBulkStudents = [];
+        let lastBulkAttendance = [];
+        let searchTimeout = null;
+        let currentUser = null;
+
+        window.addEventListener('load', async () => {
+            const { session, role } = await protectRoute(['admin']);
+            if (!session) return;
+            currentUser = session.user;
+
+            // Set default dates (last 30 days)
+            const today = new Date();
+            const lastMonth = new Date(); lastMonth.setDate(today.getDate() - 30);
+            document.getElementById('fEnd').value = today.toISOString().split('T')[0];
+            document.getElementById('fStart').value = lastMonth.toISOString().split('T')[0];
+
+            // Load all subjects globally for lookup
+            const { data: subs } = await sb.from('subjects').select('*');
+            allSubjects = subs || [];
+
+            // Event listener for smart search (enter key)
+            document.getElementById('smartInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') triggerSearch();
+            });
+        });
+
+        function triggerSearch() {
+            const val = document.getElementById('smartInput').value.trim().toUpperCase();
+            if (val.length >= 4) {
+                fetchStudentByRoll(val);
+            } else {
+                showFeedback('Please enter a valid roll number', 'error');
+            }
+        }
+
+        function toggleFilters() {
+            document.getElementById('advancedFilters').classList.toggle('show');
+        }
+
+        function resetUI() {
+            document.getElementById('singleAnalysis').classList.remove('show');
+            document.getElementById('bulkAnalysis').classList.remove('show');
+            document.getElementById('statusArea').style.display = 'block';
+            document.getElementById('actionBar').style.display = 'none';
+        }
+
+        function showLoading() {
+            document.getElementById('statusArea').innerHTML = `
+                <div class="empty-state">
+                    <div class="spinner loader-spin" style="margin: 0 auto 20px; width:40px; height:40px; border:4px solid var(--blue-soft); border-top-color:var(--blue); border-radius:50%;"></div>
+                    <p>Crunching attendance data...</p>
+                </div>
+            `;
+            document.getElementById('statusArea').style.display = 'block';
+            document.getElementById('singleAnalysis').classList.remove('show');
+            document.getElementById('bulkAnalysis').classList.remove('show');
+        }
+
+        async function fetchStudentByRoll(roll) {
+            currentMode = 'single';
+            showLoading();
+
+            const { data: student, error } = await sb
+                .from('students')
+                .select('*')
+                .eq('roll_number', roll)
+                .maybeSingle();
+
+            if (!student) {
+                document.getElementById('statusArea').innerHTML = `
+                    <div class="empty-state">
+                        <p style="color:var(--rose)">Student with Roll No <b>${escapeHTML(roll)}</b> not found.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            currentStudentData = student;
+
+            // Fetch ALL attendance records for this student
+            const { data: attData } = await sb
+                .from('attendance')
+                .select('*')
+                .eq('student_id', student.id);
+
+            currentAttendanceData = attData || [];
+            processSingleStudent(student, currentAttendanceData);
+        }
+
+        async function applyFilters() {
+            currentMode = 'bulk';
+            showLoading();
+
+            const year = document.getElementById('fYear').value;
+            const semester = document.getElementById('fSemester').value;
+            const sec = document.getElementById('fSection').value;
+            const start = document.getElementById('fStart').value;
+            const end = document.getElementById('fEnd').value;
+
+            // Fetch students in this section
+            const { data: secStudents } = await sb
+                .from('students')
+                .select('*')
+                .eq('year', year)
+                .eq('semester', semester)
+                .eq('section', sec);
+
+            if (!secStudents || secStudents.length === 0) {
+                document.getElementById('statusArea').innerHTML = `<div class="empty-state">No students found in Year ${year} - Section ${sec}.</div>`;
+                return;
+            }
+
+            const studentIds = secStudents.map(s => s.id);
+
+            // Fetch attendance for these students in range
+            const { data: attData } = await sb
+                .from('attendance')
+                .select('*')
+                .in('student_id', studentIds)
+                .gte('date', start)
+                .lte('date', end);
+
+            processBulkReport(secStudents, attData || []);
+        }
+
+        function processSingleStudent(student, attendance) {
+            document.getElementById('statusArea').style.display = 'none';
+            document.getElementById('singleAnalysis').classList.add('show');
+            document.getElementById('actionBar').style.display = 'flex';
+
+            document.getElementById('stName').textContent = student.name;
+            document.getElementById('stMeta').textContent = `${student.roll_number} • Year ${student.year} • Sem ${student.semester} • Section ${student.section}`;
+
+            const present = attendance.reduce((sum, a) => a.status === 'present' ? sum + (a.period_count || 1) : sum, 0);
+            const total = attendance.reduce((sum, a) => sum + (a.period_count || 1), 0);
+            const absent = total - present;
+            const overall = total > 0 ? Math.round((present / total) * 100) : 0;
+
+            document.getElementById('stOverall').textContent = `${overall}%`;
+            document.getElementById('stTotal').textContent = total;
+            document.getElementById('stAbsent').textContent = absent;
+
+            // Subject-wise Breakdown
+            const subMap = {};
+            attendance.forEach(a => {
+                const count = a.period_count || 1;
+                if (!subMap[a.subject_id]) subMap[a.subject_id] = { p: 0, t: 0 };
+                subMap[a.subject_id].t += count;
+                if (a.status === 'present') subMap[a.subject_id].p += count;
+            });
+
+            const grid = document.getElementById('stSubjects');
+            grid.innerHTML = '';
+
+            // Show all subjects for student's year/sem even if no attendance
+            const relevantSubs = allSubjects.filter(s => s.year == student.year && s.semester == student.semester);
+
+            relevantSubs.forEach(sub => {
+                const data = subMap[sub.id] || { p: 0, t: 0 };
+                const perc = data.t > 0 ? Math.round((data.p / data.t) * 100) : 0;
+                let colorClass = perc > 75 ? 'perc-high' : (perc > 60 ? 'perc-mid' : 'perc-low');
+
+                grid.innerHTML += `
+                    <div class="sub-card" onclick="openSubjectHistory('${sub.id}', '${escapeHTML(sub.name)}')" style="cursor:pointer">
+                        <div class="sub-main">
+                            <h4>${escapeHTML(sub.name)}</h4>
+                            <p>${escapeHTML(sub.code)} • ${data.p}/${data.t} Sessions</p>
+                        </div>
+                        <div class="sub-perc ${colorClass}">${perc}%</div>
+                    </div>
+                `;
+            });
+
+            // Pattern Detection (Day of week)
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const dayAbsents = [0, 0, 0, 0, 0, 0, 0];
+            attendance.filter(a => a.status === 'absent').forEach(a => {
+                const d = new Date(a.date).getDay();
+                dayAbsents[d]++;
+            });
+
+            const maxAbsentDay = dayAbsents.indexOf(Math.max(...dayAbsents));
+            const patternMsg = Math.max(...dayAbsents) > 2
+                ? `Frequent absences detected on <b>${escapeHTML(days[maxAbsentDay])}s</b>. Subject focus: <b>${escapeHTML(relevantSubs[0]?.name || 'Unknown')}</b>.`
+                : "Attendance behavior is consistent across the week. No specific pattern detected.";
+            document.getElementById('stPattern').innerHTML = patternMsg;
+
+            // Prediction
+            let predictText = "";
+            if (overall >= 75) {
+                predictText = `✅ <b>Safe Zone</b>: Consistent attendance trend. Final attendance projection is above 75%.`;
+            } else if (overall >= 60) {
+                predictText = `💡 <b>Caution Zone</b>: Attendance is close to the minimum requirement.`;
+            } else {
+                predictText = `⚠️ <b>Risk Zone</b>: Attendance is critically low and may fall below requirements.`;
+            }
+            document.getElementById('stPredict').innerHTML = predictText;
+        }
+
+        async function openSubjectHistory(subId, subName) {
+            if (!currentStudentData) return;
+            document.getElementById('modalSubName').textContent = subName;
+            
+            const tbody = document.getElementById('historyBody');
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px;"><div class="spinner loader-spin" style="margin:0 auto; width:30px; height:30px; border:3px solid var(--blue-soft); border-top-color:var(--blue); border-radius:50%;"></div></td></tr>';
+            
+            document.getElementById('historyModal').classList.add('show');
+            document.getElementById('historyDateSearch').value = '';
+
+            // Fetch fresh records from database (per user request to fix PERIOD not showing)
+            const { data, error } = await sb
+                .from('attendance')
+                .select('*')
+                .eq('student_id', currentStudentData.id)
+                .eq('subject_id', subId)
+                .order('date', { ascending: false })
+                .order('period', { ascending: true });
+
+            console.log("Attendance history:", data);
+
+            if (error || !data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px; color:var(--tm)">No records found for this subject.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(record => {
+                const dayName = new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' });
+                const statusBadge = '<span class="h-status ' + (record.status === 'present' ? 'h-present' : 'h-absent') + '">' + escapeHTML(record.status.toUpperCase()) + '</span>';
+                
+                // Fix Period Label Logic
+                let periodLabel = "-";
+                if (record.period !== null && record.period !== undefined) {
+                    let pVal = record.period.toString();
+                    periodLabel = pVal.startsWith('P') ? pVal : 'P' + pVal;
+                }
+
+                return '<tr><td>' + escapeHTML(record.date) + '</td><td>' + escapeHTML(dayName) + '</td><td>' + escapeHTML(periodLabel) + '</td><td>' + statusBadge + '</td></tr>';
+            }).join('');
+        }
+
+
+        function closeHistory() {
+            document.getElementById('historyModal').classList.remove('show');
+        }
+
+        function filterHistoryByDate() {
+            const val = document.getElementById('historyDateSearch').value;
+            const rows = document.querySelectorAll('#historyBody tr');
+
+            rows.forEach(row => {
+                if (!val) {
+                    row.style.display = '';
+                    return;
+                }
+                const rowDate = row.children[0].textContent.trim();
+                row.style.display = rowDate === val ? '' : 'none';
+            });
+        }
+
+        function processBulkReport(students, attendance) {
+            lastBulkStudents = [...students];
+            lastBulkAttendance = [...attendance];
+            document.getElementById('statusArea').style.display = 'none';
+            document.getElementById('bulkAnalysis').classList.add('show');
+            document.getElementById('actionBar').style.display = 'flex';
+
+            const tbody = document.getElementById('bulkTableBody');
+            tbody.innerHTML = '';
+
+            // Sort students by roll number (natural sorting)
+            students.sort((a, b) => a.roll_number.localeCompare(b.roll_number, undefined, { numeric: true }));
+
+            students.forEach(s => {
+                const sAtt = attendance.filter(a => a.student_id === s.id);
+                const present = sAtt.reduce((sum, a) => a.status === 'present' ? sum + (a.period_count || 1) : sum, 0);
+                const total = sAtt.reduce((sum, a) => sum + (a.period_count || 1), 0);
+                const perc = total > 0 ? Math.round((present / total) * 100) : 0;
+
+                let statusBadge = perc < 60 ? '<span class="risk-badge risk-crit">Critical</span>' : (perc < 75 ? '<span class="risk-badge risk-warn">Warning</span>' : '<span class="risk-badge risk-safe">Safe</span>');
+
+                const tr = document.createElement('tr');
+                tr.className = 'student-row';
+                tr.dataset.roll = s.roll_number;
+                tr.innerHTML = `
+                    <td>${escapeHTML(s.name)}</td>
+                    <td>${escapeHTML(s.roll_number)}</td>
+                    <td><b>${perc}%</b> (${present}/${total})</td>
+                    <td>${statusBadge}</td>
+                `;
+                tr.addEventListener('click', () => {
+                    document.getElementById('smartInput').value = s.roll_number;
+                    fetchStudentByRoll(s.roll_number);
+                });
+                tbody.appendChild(tr);
+            });
+        }
+
+        function exportExcel() {
+            if (currentMode === 'single') {
+                if (!currentStudentData) return;
+                const rows = currentAttendanceData.map(a => {
+                    const sub = allSubjects.find(s => s.id === a.subject_id);
+                    return {
+                        Date: a.date,
+                        Subject: sub ? sub.name : 'Unknown',
+                        Status: a.status.toUpperCase(),
+                        Period: a.period || '-',
+                        Units: a.period_count || 1
+                    };
+                });
+                const ws = XLSX.utils.json_to_sheet(rows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+                XLSX.writeFile(wb, `${currentStudentData.roll_number}_Attendance_Report.xlsx`);
+            } else {
+                // Bulk Export - High Fidelity Structured Academic Format
+                if (lastBulkStudents.length === 0) {
+                    showFeedback('No data to export. Please load a report first.', 'error');
+                    return;
+                }
+
+                const year = document.getElementById('fYear').value;
+                const semester = document.getElementById('fSemester').value;
+                
+                // 1. Identify relevant subjects
+                let relevantSubs = allSubjects.filter(s => s.year == year && s.semester == semester);
+                relevantSubs.sort((a, b) => a.name.localeCompare(b.name));
+
+                // 2. Prepare Headers
+                const headers = ["S.No", "Roll Number", "Name"];
+                relevantSubs.forEach(s => headers.push(s.name));
+                headers.push("TOTAL", "%");
+
+                // 3. Row 2: Conducted Classes
+                const conductedRow = ["Total Classes >", "", ""];
+                let grandTotalConducted = 0;
+                relevantSubs.forEach(sub => {
+                    // Count unique (date, period) entries for this subject in the bulk data
+                    const subAtt = lastBulkAttendance.filter(a => a.subject_id === sub.id);
+                    // We need unique sessions. Since we might have multiple students for the same session,
+                    // we group by date and period.
+                    const uniqueSessions = {};
+                    subAtt.forEach(a => {
+                        const count = a.period_count || 1;
+                        // If it's a multi-period record (e.g. period_count > 1), we should treat it as multiple classes
+                        // But we need to avoid double counting if multiple students are in the same multi-period session.
+                        // However, the standard is now P1, P2 entries. 
+                        const key = `${a.date}_${a.period || 'S'}`; 
+                        uniqueSessions[key] = Math.max(uniqueSessions[key] || 0, count);
+                    });
+                    const totalConducted = Object.values(uniqueSessions).reduce((sum, val) => sum + val, 0);
+                    conductedRow.push(totalConducted);
+                    grandTotalConducted += totalConducted;
+                });
+                conductedRow.push(grandTotalConducted, "");
+
+                // 4. Student Rows
+                const dataRows = lastBulkStudents.map((student, idx) => {
+                    const sRows = [idx + 1, student.roll_number, student.name];
+                    const sAtt = lastBulkAttendance.filter(a => a.student_id === student.id);
+                    
+                    let studentTotalPresent = 0;
+                    relevantSubs.forEach(sub => {
+                        const subAtt = sAtt.filter(a => a.subject_id === sub.id && a.status === 'present');
+                        const presentUnits = subAtt.reduce((sum, a) => sum + (a.period_count || 1), 0);
+                        sRows.push(presentUnits);
+                        studentTotalPresent += presentUnits;
+                    });
+
+                    const percentage = grandTotalConducted > 0 
+                        ? ((studentTotalPresent / grandTotalConducted) * 100).toFixed(2) 
+                        : "0.00";
+                    
+                    sRows.push(studentTotalPresent, percentage);
+                    return sRows;
+                });
+
+                // Build Workbook
+                const wsData = [headers, conductedRow, ...dataRows];
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `Attendance_Year${year}_Sem${semester}`);
+
+                // Final Output
+                const filename = `Attendance_Report_Year${year}_Sem${semester}_Section${document.getElementById('fSection').value}.xlsx`;
+                XLSX.writeFile(wb, filename);
+            }
+        }
+
+        function refreshCurrent() {
+            if (currentMode === 'single') fetchStudentByRoll(document.getElementById('smartInput').value);
+            else applyFilters();
+        }
+    </script>
+    <!-- History Modal -->
+    <div class="modal" id="historyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalSubName">Subject History</h3>
+                <div class="modal-close" onclick="closeHistory()">✕</div>
+            </div>
+            <div class="modal-body">
+                <div class="history-search-wrap">
+                    <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); width:18px; height:18px; stroke:var(--tm); fill:none; stroke-width:2.5;"
+                        viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                    </svg>
+                    <input type="date" id="historyDateSearch" class="history-search" onchange="filterHistoryByDate()">
+                </div>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Day</th>
+                            <th>Period</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
