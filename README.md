@@ -134,15 +134,6 @@ npm run dev
 
 App will be live at **http://localhost:5173**
 
-### 5. Deploy to Vercel
-
-```bash
-npm run build
-vercel deploy
-```
-
-Or connect your GitHub repo directly to Vercel for **automatic deployments** on every push.
-
 ---
 
 ## 🎯 Why This Exists
@@ -153,16 +144,6 @@ Traditional attendance systems in colleges are slow, error-prone, and siloed. Th
 - ✅ **Eliminate errors** — Automated logic removes human data entry mistakes
 - 📡 **Improve communication** — Instant notifications bridge the gap between staff and students
 - 📂 **Digitize workflows** — Replace registers and spreadsheets with a live, auditable system
-
----
-
-## 📸 Screenshots
-
-> _Add screenshots of the Timetable Builder, Attendance Dashboard, Notification Center, and Student View here._
-
-| Timetable Builder | Attendance Dashboard | Notifications |
-|---|---|---|
-| `screenshot1.png` | `screenshot2.png` | `screenshot3.png` |
 
 ---
 
