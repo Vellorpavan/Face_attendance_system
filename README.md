@@ -2,7 +2,7 @@
 
 <img src="https://img.shields.io/badge/SVPCET_AI-Attendance_System-0ea5e9?style=for-the-badge&logo=graduation-cap&logoColor=white" alt="SVPCET AI Attendance System" />
 
-# 🎓 SVPCET AI Attendance System
+# 🎓 Collage Face Attendance System
 
 **Intelligent, real-time academic management — attendance, timetables, and communication, unified.**
 
@@ -20,7 +20,7 @@
 
 ## 📌 Overview
 
-**SVPCET AI Attendance System** is a full-stack academic management platform built to eliminate manual attendance bottlenecks in educational institutions. It connects admins, teachers, and students through a single, unified interface — automating workflows that used to take hours.
+**Collage Face Attendance System** is a full-stack academic management platform built to eliminate manual attendance bottlenecks in educational institutions. It connects admins, teachers, and students through a single, unified interface — automating workflows that used to take hours.
 
 Built on **Supabase** for real-time data, **PostgreSQL** for reliable storage, and deployed on **Vercel** for zero-downtime access, this system is designed to scale with your institution.
 
